@@ -26,7 +26,7 @@ let nodes = [];
 let selectedNodeId = null;
 let isAuthSignUpMode = false;
 
-// Variáveis para controlar o arrastamento dos nós
+// Variáveis para controlar o arrastamento dos nós (Drag and Drop)
 let isDraggingNode = false;
 let draggedNodeId = null;
 let dragOffset = { x: 0, y: 0 };
@@ -147,6 +147,7 @@ auth.onAuthStateChanged((user) => updateAuthButton(user));
 // ==========================================
 const nodesLayer = document.getElementById('nodesLayer');
 const connectionsLayer = document.getElementById('connectionsLayer');
+const canvasStage = document.getElementById('canvasStage');
 const canvasWrapper = document.getElementById('canvasWrapper');
 const nodeToolbar = document.getElementById('nodeToolbar');
 
@@ -200,18 +201,19 @@ function renderMap() {
       selectNode(node.id);
     });
 
-    // Evento para iniciar o arrastamento (Drag) do nó
+    // Evento otimizado para iniciar o arrastamento do cartão
     el.addEventListener('mousedown', (e) => {
-      // Se estiver a editar o texto, não inicia o arrastamento
-      if (e.target.tagName === 'SPAN') return;
+      if (e.target.tagName === 'SPAN') return; // Permite editar texto sem arrastar
       
       isDraggingNode = true;
       draggedNodeId = node.id;
       selectNode(node.id);
 
-      const rect = el.getBoundingClientRect();
-      dragOffset.x = e.clientX - rect.left;
-      dragOffset.y = e.clientY - rect.top;
+      const stageRect = canvasStage.getBoundingClientRect();
+      const currentScale = 1; // Ajustável se houver zoom ativo
+
+      dragOffset.x = (e.clientX - stageRect.left) / currentScale - node.x;
+      dragOffset.y = (e.clientY - stageRect.top) / currentScale - node.y;
       
       e.stopPropagation();
     });
@@ -220,16 +222,16 @@ function renderMap() {
   });
 }
 
-// Movimento global do rato para arrastar o nó selecionado
+// Movimento global para atualizar a posição do card arrastado
 window.addEventListener('mousemove', (e) => {
   if (!isDraggingNode || !draggedNodeId) return;
 
-  const stageRect = canvasWrapper.getBoundingClientRect();
+  const stageRect = canvasStage.getBoundingClientRect();
   const node = nodes.find(n => n.id === draggedNodeId);
 
   if (node) {
-    node.x = e.clientX - stageRect.left - dragOffset.x + canvasWrapper.scrollLeft;
-    node.y = e.clientY - stageRect.top - dragOffset.y + canvasWrapper.scrollTop;
+    node.x = (e.clientX - stageRect.left) - dragOffset.x;
+    node.y = (e.clientY - stageRect.top) - dragOffset.y;
     renderMap();
   }
 });
@@ -300,8 +302,10 @@ document.getElementById('fileUpload')?.addEventListener('change', (e) => {
 });
 
 // ==========================================
-// FERRAMENTAS DA TOOLBAR DE NÓS
+// FERRAMENTAS DA TOOLBAR DE NÓS (FILHO E IRMÃO)
 // ==========================================
+
+// Adicionar Sub-Tópico (Filho)
 document.getElementById('btnAddChild')?.addEventListener('click', () => {
   if (!selectedNodeId) return;
   const parent = nodes.find(n => n.id === selectedNodeId);
@@ -313,6 +317,25 @@ document.getElementById('btnAddChild')?.addEventListener('click', () => {
     y: parent.y + (Math.random() * 80 - 40),
     color: parent.color,
     parent: parent.id
+  };
+  nodes.push(newNode);
+  selectNode(newId);
+});
+
+// Adicionar Tópico Irmão (Mesmo nível / mesmo pai)
+document.getElementById('btnAddSibling')?.addEventListener('click', () => {
+  if (!selectedNodeId) return;
+  const selectedNode = nodes.find(n => n.id === selectedNodeId);
+  
+  // Não permite criar irmão direto da raiz se não fizer sentido, ou cria com pai null
+  const newId = 'node_' + Date.now();
+  const newNode = {
+    id: newId,
+    text: 'Novo Irmão',
+    x: selectedNode.x,
+    y: selectedNode.y + 90, // Posicionado logo abaixo
+    color: selectedNode.color,
+    parent: selectedNode.parent // Partilha o mesmo pai
   };
   nodes.push(newNode);
   selectNode(newId);

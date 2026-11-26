@@ -26,6 +26,11 @@ let nodes = [];
 let selectedNodeId = null;
 let isAuthSignUpMode = false;
 
+// Variáveis para controlar o arrastamento dos nós
+let isDraggingNode = false;
+let draggedNodeId = null;
+let dragOffset = { x: 0, y: 0 };
+
 // Nó raiz inicial padrão
 function initDefaultMap() {
   nodes = [
@@ -189,14 +194,50 @@ function renderMap() {
 
     el.appendChild(textSpan);
 
+    // Selecionar nó ao clicar
     el.addEventListener('click', (e) => {
       e.stopPropagation();
       selectNode(node.id);
     });
 
+    // Evento para iniciar o arrastamento (Drag) do nó
+    el.addEventListener('mousedown', (e) => {
+      // Se estiver a editar o texto, não inicia o arrastamento
+      if (e.target.tagName === 'SPAN') return;
+      
+      isDraggingNode = true;
+      draggedNodeId = node.id;
+      selectNode(node.id);
+
+      const rect = el.getBoundingClientRect();
+      dragOffset.x = e.clientX - rect.left;
+      dragOffset.y = e.clientY - rect.top;
+      
+      e.stopPropagation();
+    });
+
     nodesLayer.appendChild(el);
   });
 }
+
+// Movimento global do rato para arrastar o nó selecionado
+window.addEventListener('mousemove', (e) => {
+  if (!isDraggingNode || !draggedNodeId) return;
+
+  const stageRect = canvasWrapper.getBoundingClientRect();
+  const node = nodes.find(n => n.id === draggedNodeId);
+
+  if (node) {
+    node.x = e.clientX - stageRect.left - dragOffset.x + canvasWrapper.scrollLeft;
+    node.y = e.clientY - stageRect.top - dragOffset.y + canvasWrapper.scrollTop;
+    renderMap();
+  }
+});
+
+window.addEventListener('mouseup', () => {
+  isDraggingNode = false;
+  draggedNodeId = null;
+});
 
 function selectNode(id) {
   selectedNodeId = id;
@@ -218,8 +259,6 @@ canvasWrapper?.addEventListener('click', () => {
 // ==========================================
 // CONTROLOS DA BARRA SUPERIOR (BOTÕES)
 // ==========================================
-
-// 1. Botão Novo Mapa
 document.getElementById('btnNewMap')?.addEventListener('click', () => {
   if (confirm('Deseja criar um novo mapa? As alterações não guardadas serão perdidas.')) {
     nodes = [
@@ -232,7 +271,6 @@ document.getElementById('btnNewMap')?.addEventListener('click', () => {
   }
 });
 
-// 2. Botão Auto-Organizar
 document.getElementById('btnAutoLayout')?.addEventListener('click', () => {
   const root = nodes.find(n => n.parent === null);
   if (!root) return;
@@ -251,7 +289,6 @@ document.getElementById('btnAutoLayout')?.addEventListener('click', () => {
   showToast('Mapa auto-organizado com sucesso!');
 });
 
-// 3. Upload de Arquivo
 document.getElementById('fileUpload')?.addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;

@@ -193,6 +193,17 @@ function renderMap() {
       node.text = textSpan.textContent;
     });
 
+    // Atalhos por teclado nos nós (Tab para filho, Enter para irmão)
+    textSpan.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        addChildNode(node.id);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        addSiblingNode(node.id);
+      }
+    });
+
     el.appendChild(textSpan);
 
     // Selecionar nó ao clicar
@@ -201,19 +212,17 @@ function renderMap() {
       selectNode(node.id);
     });
 
-    // Evento otimizado para iniciar o arrastamento do cartão
+    // Evento de arrastamento fluido do card
     el.addEventListener('mousedown', (e) => {
-      if (e.target.tagName === 'SPAN') return; // Permite editar texto sem arrastar
+      if (e.target.tagName === 'SPAN' && document.activeElement === e.target) return;
       
       isDraggingNode = true;
       draggedNodeId = node.id;
       selectNode(node.id);
 
       const stageRect = canvasStage.getBoundingClientRect();
-      const currentScale = 1; // Ajustável se houver zoom ativo
-
-      dragOffset.x = (e.clientX - stageRect.left) / currentScale - node.x;
-      dragOffset.y = (e.clientY - stageRect.top) / currentScale - node.y;
+      dragOffset.x = (e.clientX - stageRect.left) - node.x;
+      dragOffset.y = (e.clientY - stageRect.top) - node.y;
       
       e.stopPropagation();
     });
@@ -302,13 +311,11 @@ document.getElementById('fileUpload')?.addEventListener('change', (e) => {
 });
 
 // ==========================================
-// FERRAMENTAS DA TOOLBAR DE NÓS (FILHO E IRMÃO)
+// FUNÇÕES DE CRIAÇÃO DE NÓS (FILHO E IRMÃO)
 // ==========================================
-
-// Adicionar Sub-Tópico (Filho)
-document.getElementById('btnAddChild')?.addEventListener('click', () => {
-  if (!selectedNodeId) return;
-  const parent = nodes.find(n => n.id === selectedNodeId);
+function addChildNode(parentId) {
+  const parent = nodes.find(n => n.id === parentId);
+  if (!parent) return;
   const newId = 'node_' + Date.now();
   const newNode = {
     id: newId,
@@ -320,25 +327,31 @@ document.getElementById('btnAddChild')?.addEventListener('click', () => {
   };
   nodes.push(newNode);
   selectNode(newId);
-});
+}
 
-// Adicionar Tópico Irmão (Mesmo nível / mesmo pai)
-document.getElementById('btnAddSibling')?.addEventListener('click', () => {
-  if (!selectedNodeId) return;
-  const selectedNode = nodes.find(n => n.id === selectedNodeId);
+function addSiblingNode(nodeId) {
+  const currentNode = nodes.find(n => n.id === nodeId);
+  if (!currentNode) return;
   
-  // Não permite criar irmão direto da raiz se não fizer sentido, ou cria com pai null
   const newId = 'node_' + Date.now();
   const newNode = {
     id: newId,
     text: 'Novo Irmão',
-    x: selectedNode.x,
-    y: selectedNode.y + 90, // Posicionado logo abaixo
-    color: selectedNode.color,
-    parent: selectedNode.parent // Partilha o mesmo pai
+    x: currentNode.x,
+    y: currentNode.y + 90,
+    color: currentNode.color,
+    parent: currentNode.parent
   };
   nodes.push(newNode);
   selectNode(newId);
+}
+
+document.getElementById('btnAddChild')?.addEventListener('click', () => {
+  if (selectedNodeId) addChildNode(selectedNodeId);
+});
+
+document.getElementById('btnAddSibling')?.addEventListener('click', () => {
+  if (selectedNodeId) addSiblingNode(selectedNodeId);
 });
 
 document.getElementById('btnDeleteNode')?.addEventListener('click', () => {

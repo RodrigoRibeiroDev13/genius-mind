@@ -65,7 +65,6 @@ async function init() {
 
 function updateAuthUI() {
   const btnLogin = document.getElementById("btnLoginModal");
-  if (!btnLogin) return;
   if (currentUser) {
     btnLogin.textContent = `👤 ${currentUser.email.split("@")[0]}`;
     btnLogin.title = "Clique para terminar sessão";
@@ -125,14 +124,13 @@ async function loadMapFromFirebase(id) {
     document.getElementById("mapTitle").value = data.title;
     nodes = data.nodes || nodes;
 
-    // Verificar permissões
+    // Verificar permissões (se não for o dono, pode visualizar ou editar conforme a regra definida)
     if (currentUser && data.ownerId !== currentUser.id) {
-      userPermission = "edit";
+      userPermission = "edit"; // Ou restrito, dependendo da sua preferência de partilha
     } else if (!currentUser) {
-      userPermission = "view";
+      userPermission = "view"; // Visitantes sem sessão apenas visualizam
       showToast("Modo de Visualização: Inicie sessão para editar.");
-      const aiBar = document.querySelector(".ai-prompt-bar");
-      if (aiBar) aiBar.style.display = "none";
+      document.querySelector(".ai-prompt-bar").style.display = "none";
       nodeToolbar.style.display = "none";
     }
 
@@ -274,7 +272,6 @@ function centerView() {
 
 function showToast(msg) {
   const toast = document.getElementById("toast");
-  if (!toast) return;
   toast.textContent = msg;
   toast.classList.remove("hidden");
   clearTimeout(toast._timer);
@@ -284,45 +281,36 @@ function showToast(msg) {
 // Configuração de Eventos de Autenticação e Modais
 function setupEvents() {
   const authModal = document.getElementById("authModal");
-  const btnCloseAuth = document.getElementById("closeAuthModal");
-  if (btnCloseAuth && authModal) {
-    btnCloseAuth.onclick = () => authModal.classList.add("hidden");
-  }
+  document.getElementById("closeAuthModal").onclick = () => authModal.classList.add("hidden");
   
   let isSignUp = false;
-  const toggleAuthMode = document.getElementById("toggleAuthMode");
-  if (toggleAuthMode) {
-    toggleAuthMode.onclick = (e) => {
-      e.preventDefault();
-      isSignUp = !isSignUp;
-      document.getElementById("authTitle").textContent = isSignUp ? "Criar Conta no Genius Mind" : "Entrar no Genius Mind";
-      document.getElementById("btnAuthSubmit").textContent = isSignUp ? "Registar" : "Entrar";
-      toggleAuthMode.textContent = isSignUp ? "Já tenho uma conta" : "Registe-se";
-    };
-  }
+  document.getElementById("toggleAuthMode").onclick = (e) => {
+    e.preventDefault();
+    isSignUp = !isSignUp;
+    document.getElementById("authTitle").textContent = isSignUp ? "Criar Conta no Genius Mind" : "Entrar no Genius Mind";
+    document.getElementById("btnAuthSubmit").textContent = isSignUp ? "Registar" : "Entrar";
+    document.getElementById("toggleAuthMode").textContent = isSignUp ? "Já tenho uma conta" : "Registe-se";
+  };
 
-  const btnAuthSubmit = document.getElementById("btnAuthSubmit");
-  if (btnAuthSubmit) {
-    btnAuthSubmit.onclick = async () => {
-      const email = document.getElementById("authEmail").value;
-      const password = document.getElementById("authPassword").value;
+  document.getElementById("btnAuthSubmit").onclick = async () => {
+    const email = document.getElementById("authEmail").value;
+    const password = document.getElementById("authPassword").value;
 
-      try {
-        if (isSignUp) {
-          await auth.createUserWithEmailAndPassword(email, password);
-          showToast("Conta criada com sucesso!");
-          authModal.classList.add("hidden");
-        } else {
-          await auth.signInWithEmailAndPassword(email, password);
-          showToast("Sessão iniciada com sucesso!");
-          authModal.classList.add("hidden");
-          window.location.reload();
-        }
-      } catch (err) {
-        showToast("Erro: " + err.message);
+    try {
+      if (isSignUp) {
+        await auth.createUserWithEmailAndPassword(email, password);
+        showToast("Conta criada com sucesso!");
+        authModal.classList.add("hidden");
+      } else {
+        await auth.signInWithEmailAndPassword(email, password);
+        showToast("Sessão iniciada com sucesso!");
+        authModal.classList.add("hidden");
+        window.location.reload();
       }
-    };
-  }
+    } catch (err) {
+      showToast("Erro: " + err.message);
+    }
+  };
 
   // Eventos de movimento (Pan/Zoom)
   canvasWrapper.addEventListener("mousedown", (e) => {
@@ -359,21 +347,14 @@ function setupEvents() {
     render();
   }, { passive: false });
 
-  const btnShare = document.getElementById("btnShare");
-  if (btnShare) btnShare.onclick = openShareModal;
-  
-  const closeShareModal = document.getElementById("closeShareModal");
-  if (closeShareModal) closeShareModal.onclick = () => document.getElementById("shareModal").classList.add("hidden");
-  
-  const btnCopyLink = document.getElementById("btnCopyLink");
-  if (btnCopyLink) {
-    btnCopyLink.onclick = () => {
-      const input = document.getElementById("shareLinkInput");
-      input.select();
-      navigator.clipboard.writeText(input.value);
-      showToast("Link copiado para a área de transferência!");
-    };
-  }
+  document.getElementById("btnShare").onclick = openShareModal;
+  document.getElementById("closeShareModal").onclick = () => document.getElementById("shareModal").classList.add("hidden");
+  document.getElementById("btnCopyLink").onclick = () => {
+    const input = document.getElementById("shareLinkInput");
+    input.select();
+    navigator.clipboard.writeText(input.value);
+    showToast("Link copiado para a área de transferência!");
+  };
 
   document.getElementById("btnZoomIn").onclick = () => { zoom = Math.min(2, zoom + 0.15); render(); };
   document.getElementById("btnZoomOut").onclick = () => { zoom = Math.max(0.35, zoom - 0.15); render(); };

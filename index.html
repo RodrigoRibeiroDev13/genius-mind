@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Genius Mind — Mapas Mentais</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Bibliotecas Externas para Exportação e Leitura de Arquivos -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
+  <!-- Firebase App (Core), Auth e Firestore SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+  <!-- Barra Superior (Identidade Genius Mind Laranja) -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon" title="Genius Mind">
+        <!-- Ícone SVG fiel à identidade visual enviada -->
+        <svg viewBox="0 0 64 64" width="38" height="38" fill="none">
+          <defs>
+            <linearGradient id="gmGrad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#FFA726"/>
+              <stop offset="100%" stop-color="#FF5500"/>
+            </linearGradient>
+          </defs>
+          <rect width="64" height="64" rx="16" fill="url(#gmGrad)"/>
+          <!-- Raios superiores -->
+          <path d="M32 8V13M23 10L25.5 14M41 10L38.5 14" stroke="#FFE082" stroke-width="2.6" stroke-linecap="round"/>
+          <!-- Conectores laterais -->
+          <path d="M21 27H15L12 23H9M21 35H15L12 39H9M43 27H49L52 23H55M43 35H49L52 39H55" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="4" y="19" width="7" height="6" rx="2" fill="#FFFFFF"/>
+          <rect x="4" y="37" width="7" height="6" rx="2" fill="#FFFFFF"/>
+          <rect x="53" y="19" width="7" height="6" rx="2" fill="#FFFFFF"/>
+          <rect x="53" y="37" width="7" height="6" rx="2" fill="#FFFFFF"/>
+          <!-- Cérebro central -->
+          <path d="M31 19C26.5 19 23 22.2 23 26.5C21 27.5 19.8 29.5 19.8 31.8C19.8 34.3 21.2 36.4 23.3 37.3C23.8 41.2 27 44 31 44V19Z" fill="#FFFFFF"/>
+          <path d="M33 19C37.5 19 41 22.2 41 26.5C43 27.5 44.2 29.5 44.2 31.8C44.2 34.3 42.8 36.4 40.7 37.3C40.2 41.2 37 44 33 44V19Z" fill="#FFFFFF"/>
+          <path d="M27 25C25.5 25 24.5 26.2 24.5 27.5M28 32C26 32 24.5 33.2 24.5 34.8M37 25C38.5 25 39.5 26.2 39.5 27.5M36 32C38 32 39.5 33.2 39.5 34.8" stroke="#FF5E00" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <span class="brand-title">Genius <span class="highlight">Mind</span></span>
+        <input type="text" id="mapTitle" value="Meu Mapa Estratégico" title="Clique para renomear o mapa" />
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <button class="btn btn-ghost" id="btnNewMap" title="Criar novo mapa limpo">+ Novo</button>
+      <button class="btn btn-ghost" id="btnAutoLayout" title="Organizar nós automaticamente">⚡ Auto-Organizar</button>
+      
+      <!-- Upload Multi-formato -->
+      <label class="btn btn-outline" title="Importar PDF, Word (.docx), SVG, JSON, MD ou TXT">
+        📂 Subir Arquivo
+        <input type="file" id="fileUpload" accept=".pdf,.doc,.docx,.svg,.json,.md,.txt" hidden />
+      </label>
+
+      <!-- Menu de Downloads -->
+      <div class="dropdown">
+        <button class="btn btn-outline" id="btnDownloadMenu">⬇️ Baixar ▾</button>
+        <div class="dropdown-menu" id="downloadMenu">
+          <button data-format="png">🖼️ Imagem PNG (Alta Resolução)</button>
+          <button data-format="svg">📐 Vetor Escalável (.svg)</button>
+          <button data-format="pdf">📕 Documento PDF (.pdf)</button>
+          <button data-format="docx">📘 Documento Word (.docx)</button>
+          <button data-format="md">📝 Texto Markdown (.md)</button>
+          <button data-format="json">💾 Projeto Genius Mind (.json)</button>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="btnShare">🔗 Compartilhar</button>
+      
+      <!-- Botão de Login / Conta -->
+      <button class="btn btn-outline" id="btnLoginModal">👤 Entrar</button>
+    </div>
+  </header>
+
+  <!-- Barra Flutuante de Prompt IA (Sempre visível) -->
+  <section class="ai-prompt-bar">
+    <div class="ai-badge">✨ Genius IA</div>
+    <input 
+      type="text" 
+      id="aiPromptInput" 
+      placeholder="Digite um tema, ideia ou cole um resumo para gerar o mapa mental (ex: Plano de estudos para ENEM)..." 
+    />
+    <button class="btn btn-primary" id="btnGenerateAI">Gerar Mapa</button>
+  </section>
+
+  <!-- Barra Contextual de Edição do Nó Selecionado -->
+  <div class="node-toolbar hidden" id="nodeToolbar">
+    <button class="tool-btn" id="btnAddChild" title="Adicionar sub-tópico (Tab)">+ Filho</button>
+    <button class="tool-btn" id="btnAddSibling" title="Adicionar tópico irmão (Enter)">+ Irmão</button>
+    <button class="tool-btn" id="btnExpandAI" title="Expandir este tópico com IA">✨ Expandir IA</button>
+    <div class="divider"></div>
+    <div class="color-swatches">
+      <button class="swatch" data-color="#FF5E00" style="background:#FF5E00" title="Laranja Genius"></button>
+      <button class="swatch" data-color="#FACC15" style="background:#FACC15" title="Amarelo"></button>
+      <button class="swatch" data-color="#38BDF8" style="background:#38BDF8" title="Azul"></button>
+      <button class="swatch" data-color="#4ADE80" style="background:#4ADE80" title="Verde"></button>
+      <button class="swatch" data-color="#A855F7" style="background:#A855F7" title="Roxo"></button>
+    </div>
+    <div class="divider"></div>
+    <button class="tool-btn danger" id="btnDeleteNode" title="Excluir tópico (Delete)">🗑️</button>
+  </div>
+
+  <!-- Área Infinita do Mapa Mental -->
+  <main class="canvas-wrapper" id="canvasWrapper">
+    <div class="canvas-stage" id="canvasStage">
+      <svg class="connections-layer" id="connectionsLayer"></svg>
+      <div class="nodes-layer" id="nodesLayer"></div>
+    </div>
+
+    <!-- Onda decorativa no rodapé fiel ao layout -->
+    <svg class="brand-wave" viewBox="0 0 1440 120" preserveAspectRatio="none">
+      <path fill="#FF8C00" fill-opacity="0.18" d="M0,64L80,69.3C160,75,320,85,480,80C640,75,800,53,960,48C1120,43,1280,53,1360,58.7L1440,64L1440,120L0,120Z"></path>
+      <path fill="#FF5500" fill-opacity="0.25" d="M0,96L120,85.3C240,75,480,53,720,58.7C960,64,1200,96,1320,112L1440,120L1440,120L0,120Z"></path>
+    </svg>
+  </main>
+
+  <!-- Controles de Zoom e Atalhos -->
+  <footer class="bottom-controls">
+    <div class="shortcuts-hint">
+      <span><b>Duplo clique</b> editar</span> • 
+      <span><b>Tab</b> sub-tópico</span> • 
+      <span><b>Enter</b> irmão</span> • 
+      <span><b>Arrastar fundo</b> mover</span>
+    </div>
+    <div class="zoom-controls">
+      <button id="btnZoomOut">−</button>
+      <span id="zoomLabel">100%</span>
+      <button id="btnZoomIn">+</button>
+      <button id="btnZoomReset" title="Centralizar">🎯</button>
+    </div>
+  </footer>
+
+  <!-- Modal de Compartilhamento -->
+  <div class="modal-backdrop hidden" id="shareModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Compartilhar Mapa Mental</h3>
+        <button class="close-modal" id="closeShareModal">✕</button>
+      </div>
+      <p class="modal-desc">Qualquer pessoa com este link poderá visualizar ou editar este mapa no Genius Mind.</p>
+      <div class="share-row">
+        <input type="text" id="shareLinkInput" readonly />
+        <button class="btn btn-primary" id="btnCopyLink">Copiar Link</button>
+      </div>
+      <div class="share-permissions">
+        <label><input type="radio" name="perm" value="edit" checked /> Permitir edição completa</label>
+        <label><input type="radio" name="perm" value="view" /> Apenas visualização</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Autenticação (Login e Cadastro) -->
+  <div class="modal-backdrop hidden" id="authModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="authTitle">Entrar no Genius Mind</h3>
+        <button class="close-modal" id="closeAuthModal">✕</button>
+      </div>
+      <div class="auth-form" style="display:flex; flex-direction:column; gap:10px; margin-top:12px;">
+        <input type="email" id="authEmail" placeholder="Seu e-mail" style="padding:10px 12px; border:1.5px solid var(--gm-border); border-radius:10px; font-size:0.9rem;" />
+        <input type="password" id="authPassword" placeholder="Sua senha (mínimo 6 caracteres)" style="padding:10px 12px; border:1.5px solid var(--gm-border); border-radius:10px; font-size:0.9rem;" />
+        <button class="btn btn-primary" id="btnAuthSubmit" style="width:100%; justify-content:center; margin-top:6px;">Entrar</button>
+        <p style="margin-top:8px; text-align:center; font-size:0.85rem; color:var(--gm-muted);">
+          Não tem uma conta? <a href="#" id="toggleAuthMode" style="color:var(--gm-orange); font-weight:700; text-decoration:none;">Registe-se</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast de Notificações -->
+  <div class="toast hidden" id="toast"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>

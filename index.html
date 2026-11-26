@@ -21,7 +21,7 @@
 </head>
 <body>
 
-  <!-- Barra Superior (Identidade Genius Mind Laranja) -->
+<!-- Barra Superior (Identidade Genius Mind Laranja) -->
   <header class="topbar">
     <div class="brand">
       <div class="brand-icon" title="Genius Mind">
@@ -59,6 +59,7 @@
         <input type="file" id="fileUpload" accept=".pdf,.doc,.docx,.svg,.json,.md,.txt" hidden />
       </label>
 
+      <!-- Menu de Downloads -->
       <div class="dropdown">
         <button class="btn btn-outline" id="btnDownloadMenu">⬇️ Baixar ▾</button>
         <div class="dropdown-menu" id="downloadMenu">
@@ -132,7 +133,22 @@
     </div>
   </footer>
 
-  <!-- Modal de Autenticação Atualizado com Recuperação de Senha -->
+  <!-- Modal de Compartilhamento -->
+  <div class="modal-backdrop hidden" id="shareModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Compartilhar Mapa Mental</h3>
+        <button class="close-modal" id="closeShareModal">✕</button>
+      </div>
+      <p class="modal-desc" style="font-size: 0.85rem; color: var(--gm-muted); margin-bottom: 12px;">Qualquer pessoa com este link poderá visualizar este mapa.</p>
+      <div class="share-row" style="display: flex; gap: 8px; margin-bottom: 12px;">
+        <input type="text" id="shareLinkInput" readonly style="flex: 1; padding: 8px; border: 1px solid var(--gm-border); border-radius: 6px; font-size: 0.85rem;" />
+        <button class="btn btn-primary" id="btnCopyLink">Copiar Link</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Autenticação com Recuperação de Senha -->
   <div class="modal-backdrop hidden" id="authModal">
     <div class="modal-card">
       <div class="modal-header">
@@ -146,7 +162,7 @@
         <button class="btn btn-primary" id="btnAuthSubmit" style="width:100%; justify-content:center; margin-top:6px;">Entrar</button>
         
         <!-- Opção de Recuperação de Senha -->
-        <div style="text-align:right; margin-top:-4px;">
+        <div style="text-align:right; margin-top:-2px;">
           <button type="button" id="btnForgotPass" style="background:none; border:none; color:var(--gm-muted); font-size:0.8rem; cursor:pointer; text-decoration:underline;">Esqueci a minha senha</button>
         </div>
 

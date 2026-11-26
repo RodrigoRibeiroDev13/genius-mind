@@ -24,6 +24,7 @@ const db = firebase.firestore();
 // ==========================================
 let nodes = [];
 let selectedNodeId = null;
+let currentMapId = null;
 let isAuthSignUpMode = false;
 
 // Variáveis para controlar o arrastamento dos nós (Drag and Drop)
@@ -31,8 +32,36 @@ let isDraggingNode = false;
 let draggedNodeId = null;
 let dragOffset = { x: 0, y: 0 };
 
-// Nó raiz inicial padrão
+// Nó raiz inicial padrão ou carregar mapa partilhado via URL
 function initDefaultMap() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const mapId = urlParams.get('map');
+
+  if (mapId) {
+    showToast('A carregar mapa partilhado...');
+    db.collection('maps').doc(mapId).get().then((doc) => {
+      if (doc.exists) {
+        const data = doc.data();
+        nodes = data.nodes || [];
+        const titleInput = document.getElementById('mapTitle');
+        if (titleInput) titleInput.value = data.title || 'Mapa Partilhado';
+        currentMapId = mapId;
+        renderMap();
+        showToast('Mapa carregado com sucesso!');
+      } else {
+        showToast('Mapa não encontrado.');
+        loadDefaultNodes();
+      }
+    }).catch(() => {
+      showToast('Erro ao carregar o mapa.');
+      loadDefaultNodes();
+    });
+  } else {
+    loadDefaultNodes();
+  }
+}
+
+function loadDefaultNodes() {
   nodes = [
     { id: 'node_root', text: 'Meu Mapa Estratégico', x: 600, y: 350, color: '#FF5E00', parent: null }
   ];
@@ -102,7 +131,6 @@ btnAuthSubmit?.addEventListener('click', () => {
   }
 });
 
-// Recuperação de Palavra-passe
 btnForgotPass?.addEventListener('click', () => {
   const email = authEmailInput.value.trim();
   if (!email) {
@@ -268,12 +296,10 @@ canvasWrapper?.addEventListener('click', () => {
 // ==========================================
 document.getElementById('btnNewMap')?.addEventListener('click', () => {
   if (confirm('Deseja criar um novo mapa? As alterações não guardadas serão perdidas.')) {
-    nodes = [
-      { id: 'node_root', text: 'Meu Novo Mapa', x: 600, y: 350, color: '#FF5E00', parent: null }
-    ];
+    loadDefaultNodes();
+    currentMapId = null;
     const titleInput = document.getElementById('mapTitle');
     if (titleInput) titleInput.value = 'Meu Novo Mapa';
-    renderMap();
     showToast('Novo mapa criado com sucesso!');
   }
 });
@@ -400,7 +426,7 @@ document.getElementById('btnGenerateAI')?.addEventListener('click', () => {
 });
 
 // ==========================================
-// FUNCIONALIDADES DE PARTILHA (COMPARTILHAR)
+// FUNCIONALIDADES DE PARTILHA COM FIREBASE
 // ==========================================
 const btnShare = document.getElementById('btnShare');
 const shareModal = document.getElementById('shareModal');
@@ -409,10 +435,30 @@ const shareLinkInput = document.getElementById('shareLinkInput');
 const btnCopyLink = document.getElementById('btnCopyLink');
 
 btnShare?.addEventListener('click', () => {
-  if (shareModal && shareLinkInput) {
-    shareLinkInput.value = window.location.href;
-    shareModal.classList.remove('hidden');
-  }
+  const mapTitle = document.getElementById('mapTitle')?.value || 'Mapa Estratégico';
+  showToast('A gerar link exclusivo de partilha...');
+
+  const mapData = {
+    title: mapTitle,
+    nodes: nodes,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  const savePromise = currentMapId 
+    ? db.collection('maps').doc(currentMapId).set(mapData)
+    : db.collection('maps').add(mapData).then(docRef => { currentMapId = docRef.id; });
+
+  savePromise.then(() => {
+    const baseUrl = window.location.href.split('?')[0];
+    const shareUrl = `${baseUrl}?map=${currentMapId}`;
+    if (shareLinkInput) {
+      shareLinkInput.value = shareUrl;
+    }
+    shareModal?.classList.remove('hidden');
+    showToast('Link exclusivo gerado com sucesso!');
+  }).catch(() => {
+    showToast('Erro ao gerar link de partilha.');
+  });
 });
 
 closeShareModal?.addEventListener('click', () => {

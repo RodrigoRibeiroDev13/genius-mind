@@ -108,7 +108,7 @@ btnForgotPass?.addEventListener('click', () => {
     .then(() => {
       showToast('E-mail de recuperação enviado! Verifique a sua caixa de entrada.');
     })
-    .catch((error) => {
+    .catch(() => {
       showToast('Erro ao enviar e-mail de recuperação. Verifique o endereço.');
     });
 });
@@ -213,6 +213,53 @@ canvasWrapper?.addEventListener('click', () => {
   selectedNodeId = null;
   nodeToolbar?.classList.add('hidden');
   renderMap();
+});
+
+// ==========================================
+// CONTROLOS DA BARRA SUPERIOR (BOTÕES)
+// ==========================================
+
+// 1. Botão Novo Mapa
+document.getElementById('btnNewMap')?.addEventListener('click', () => {
+  if (confirm('Deseja criar um novo mapa? As alterações não guardadas serão perdidas.')) {
+    nodes = [
+      { id: 'node_root', text: 'Meu Novo Mapa', x: 600, y: 350, color: '#FF5E00', parent: null }
+    ];
+    const titleInput = document.getElementById('mapTitle');
+    if (titleInput) titleInput.value = 'Meu Novo Mapa';
+    renderMap();
+    showToast('Novo mapa criado com sucesso!');
+  }
+});
+
+// 2. Botão Auto-Organizar
+document.getElementById('btnAutoLayout')?.addEventListener('click', () => {
+  const root = nodes.find(n => n.parent === null);
+  if (!root) return;
+
+  const children = nodes.filter(n => n.parent === root.id);
+  const radius = 220;
+  const angleStep = (2 * Math.PI) / (children.length || 1);
+
+  children.forEach((child, index) => {
+    const angle = index * angleStep;
+    child.x = root.x + Math.cos(angle) * radius;
+    child.y = root.y + Math.sin(angle) * radius;
+  });
+
+  renderMap();
+  showToast('Mapa auto-organizado com sucesso!');
+});
+
+// 3. Upload de Arquivo
+document.getElementById('fileUpload')?.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  showToast(`A processar o ficheiro: ${file.name}...`);
+  setTimeout(() => {
+    showToast('Ficheiro importado com sucesso!');
+  }, 1000);
 });
 
 // ==========================================

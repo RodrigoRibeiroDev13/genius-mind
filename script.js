@@ -193,7 +193,6 @@ function renderMap() {
       node.text = textSpan.textContent;
     });
 
-    // Atalhos por teclado nos nós (Tab para filho, Enter para irmão)
     textSpan.addEventListener('keydown', (e) => {
       if (e.key === 'Tab') {
         e.preventDefault();
@@ -206,13 +205,11 @@ function renderMap() {
 
     el.appendChild(textSpan);
 
-    // Selecionar nó ao clicar
     el.addEventListener('click', (e) => {
       e.stopPropagation();
       selectNode(node.id);
     });
 
-    // Evento de arrastamento fluido do card
     el.addEventListener('mousedown', (e) => {
       if (e.target.tagName === 'SPAN' && document.activeElement === e.target) return;
       
@@ -231,7 +228,6 @@ function renderMap() {
   });
 }
 
-// Movimento global para atualizar a posição do card arrastado
 window.addEventListener('mousemove', (e) => {
   if (!isDraggingNode || !draggedNodeId) return;
 
@@ -435,7 +431,7 @@ btnCopyLink?.addEventListener('click', () => {
 });
 
 // ==========================================
-// FUNCIONALIDADES DE DOWNLOAD (BAIXAR)
+// FUNCIONALIDADES DE DOWNLOAD (BAIXAR FORMATOS)
 // ==========================================
 document.querySelectorAll('#downloadMenu button').forEach(button => {
   button.addEventListener('click', (e) => {
@@ -483,8 +479,65 @@ document.querySelectorAll('#downloadMenu button').forEach(button => {
         showToast('Biblioteca html2canvas não disponível.');
       }
     }
-    else {
-      showToast(`Exportação para .${format} efetuada com sucesso!`);
+    else if (format === 'svg') {
+      const connectionsHTML = document.getElementById('connectionsLayer')?.outerHTML || '';
+      const nodesHTML = document.getElementById('nodesLayer')?.innerHTML || '';
+      const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="2000">${connectionsHTML}<g>${nodesHTML}</g></svg>`;
+      const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const dlAnchor = document.createElement('a');
+      dlAnchor.href = url;
+      dlAnchor.download = `${mapTitle}.svg`;
+      dlAnchor.click();
+      URL.revokeObjectURL(url);
+      showToast('Ficheiro SVG baixado com sucesso!');
+    }
+    else if (format === 'pdf') {
+      const stage = document.getElementById('canvasStage');
+      if (window.html2canvas && window.jspdf && stage) {
+        showToast('A gerar documento PDF...');
+        window.html2canvas(stage, { backgroundColor: '#ffffff' }).then(canvas => {
+          const imgData = canvas.toDataURL('image/png');
+          const { jsPDF } = window.jspdf;
+          const pdf = new jsPDF('landscape', 'mm', 'a4');
+          const imgWidth = 297;
+          const pageHeight = 210;
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          let heightLeft = imgHeight;
+          let position = 0;
+
+          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+
+          while (heightLeft >= 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+          }
+
+          pdf.save(`${mapTitle}.pdf`);
+          showToast('Documento PDF baixado com sucesso!');
+        }).catch(() => {
+          showToast('Erro ao exportar PDF.');
+        });
+      } else {
+        showToast('Bibliotecas de PDF não carregadas.');
+      }
+    }
+    else if (format === 'docx') {
+      let docContent = `Mapa Mental: ${mapTitle}\n\nTopicos:\n`;
+      nodes.forEach(n => {
+        docContent += `• ${n.text}\n`;
+      });
+      const blob = new Blob([docContent], { type: 'application/msword;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const dlAnchor = document.createElement('a');
+      dlAnchor.href = url;
+      dlAnchor.download = `${mapTitle}.docx`;
+      dlAnchor.click();
+      URL.revokeObjectURL(url);
+      showToast('Documento Word baixado com sucesso!');
     }
   });
 });

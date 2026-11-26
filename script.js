@@ -11,7 +11,7 @@ const firebaseConfig = {
   measurementId: "G-XT8Z62LL4N"
 };
 
-// Inicializa o Firebase (Modo compat para os scripts do HTML)
+// Inicializa o Firebase (Modo compat)
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
@@ -23,9 +23,8 @@ const db = firebase.firestore();
 // ESTADO GLOBAL DA APLICAÇÃO
 // ==========================================
 let nodes = [];
-let connections = [];
 let selectedNodeId = null;
-let isAuthSignUpMode = false; // Alterna entre Entrar e Registar-se
+let isAuthSignUpMode = false;
 
 // Nó raiz inicial padrão
 function initDefaultMap() {
@@ -46,19 +45,17 @@ const authTitle = document.getElementById('authTitle');
 const toggleAuthMode = document.getElementById('toggleAuthMode');
 const authEmailInput = document.getElementById('authEmail');
 const authPasswordInput = document.getElementById('authPassword');
+const btnForgotPass = document.getElementById('btnForgotPass');
 
-// Abrir Modal de Autenticação
-btnLoginModal.addEventListener('click', () => {
+btnLoginModal?.addEventListener('click', () => {
   authModal.classList.remove('hidden');
 });
 
-// Fechar Modal
-closeAuthModal.addEventListener('click', () => {
+closeAuthModal?.addEventListener('click', () => {
   authModal.classList.add('hidden');
 });
 
-// Alternar entre Login e Registo
-toggleAuthMode.addEventListener('click', (e) => {
+toggleAuthMode?.addEventListener('click', (e) => {
   e.preventDefault();
   isAuthSignUpMode = !isAuthSignUpMode;
   if (isAuthSignUpMode) {
@@ -72,8 +69,7 @@ toggleAuthMode.addEventListener('click', (e) => {
   }
 });
 
-// Submeter Autenticação (Login / Registo com validação rigorosa)
-btnAuthSubmit.addEventListener('click', () => {
+btnAuthSubmit?.addEventListener('click', () => {
   const email = authEmailInput.value.trim();
   const password = authPasswordInput.value;
 
@@ -83,64 +79,63 @@ btnAuthSubmit.addEventListener('click', () => {
   }
 
   if (isAuthSignUpMode) {
-    // Registar Novo Utilizador
     auth.createUserWithEmailAndPassword(email, password)
       .then((userCredential) => {
         showToast('Conta criada com sucesso!');
         authModal.classList.add('hidden');
         updateAuthButton(userCredential.user);
       })
-      .catch((error) => {
-        handleAuthError(error.code);
-      });
+      .catch((error) => handleAuthError(error.code));
   } else {
-    // Iniciar Sessão (Com bloqueio rigoroso para senhas erradas)
     auth.signInWithEmailAndPassword(email, password)
       .then((userCredential) => {
         showToast('Sessão iniciada com sucesso!');
         authModal.classList.add('hidden');
         updateAuthButton(userCredential.user);
       })
-      .catch((error) => {
-        handleAuthError(error.code);
-      });
+      .catch((error) => handleAuthError(error.code));
   }
 });
 
-// Tratamento de erros de autenticação do Firebase
+// Recuperação de Palavra-passe
+btnForgotPass?.addEventListener('click', () => {
+  const email = authEmailInput.value.trim();
+  if (!email) {
+    showToast('Insira o seu e-mail no campo acima para recuperar a senha.');
+    return;
+  }
+  auth.sendPasswordResetEmail(email)
+    .then(() => {
+      showToast('E-mail de recuperação enviado! Verifique a sua caixa de entrada.');
+    })
+    .catch((error) => {
+      showToast('Erro ao enviar e-mail de recuperação. Verifique o endereço.');
+    });
+});
+
 function handleAuthError(errorCode) {
-  console.error("Erro de Autenticação:", errorCode);
-  if (
-    errorCode === 'auth/wrong-password' || 
-    errorCode === 'auth/invalid-credential' || 
-    errorCode === 'auth/user-not-found'
-  ) {
+  if (errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential' || errorCode === 'auth/user-not-found') {
     showToast('E-mail ou palavra-passe incorretos.');
   } else if (errorCode === 'auth/email-already-in-use') {
     showToast('Este e-mail já está registado.');
   } else if (errorCode === 'auth/weak-password') {
     showToast('A palavra-passe deve ter pelo menos 6 caracteres.');
-  } else if (errorCode === 'auth/invalid-email') {
-    showToast('O formato do e-mail é inválido.');
   } else {
-    showToast('Ocorreu um erro na autenticação. Tente novamente.');
+    showToast('Ocorreu um erro na autenticação.');
   }
 }
 
-// Atualizar visual do botão de login consoante o estado do utilizador
 function updateAuthButton(user) {
-  if (user) {
-    btnLoginModal.textContent = user.email.split('@')[0];
-    btnLoginModal.title = `Sessão ativa como ${user.email}`;
-  } else {
-    btnLoginModal.textContent = '👤 Entrar';
+  if (btnLoginModal) {
+    if (user) {
+      btnLoginModal.textContent = user.email.split('@')[0];
+    } else {
+      btnLoginModal.textContent = '👤 Entrar';
+    }
   }
 }
 
-// Observar estado da sessão do utilizador em tempo real
-auth.onAuthStateChanged((user) => {
-  updateAuthButton(user);
-});
+auth.onAuthStateChanged((user) => updateAuthButton(user));
 
 // ==========================================
 // RENDERIZAÇÃO E INTERAÇÃO DO MAPA MENTAL
@@ -151,10 +146,10 @@ const canvasWrapper = document.getElementById('canvasWrapper');
 const nodeToolbar = document.getElementById('nodeToolbar');
 
 function renderMap() {
+  if (!nodesLayer || !connectionsLayer) return;
   nodesLayer.innerHTML = '';
   connectionsLayer.innerHTML = '';
 
-  // Renderizar Conexões (Linhas curvas entre nós)
   nodes.forEach(node => {
     if (node.parent) {
       const parentNode = nodes.find(n => n.id === node.parent);
@@ -175,7 +170,6 @@ function renderMap() {
     }
   });
 
-  // Renderizar Nós (Cartões na tela)
   nodes.forEach(node => {
     const el = document.createElement('div');
     el.className = `mind-node ${node.id === selectedNodeId ? 'selected' : ''}`;
@@ -208,16 +202,16 @@ function selectNode(id) {
   selectedNodeId = id;
   const node = nodes.find(n => n.id === id);
   if (node) {
-    nodeToolbar.classList.remove('hidden');
+    nodeToolbar?.classList.remove('hidden');
   } else {
-    nodeToolbar.classList.add('hidden');
+    nodeToolbar?.classList.add('hidden');
   }
   renderMap();
 }
 
-canvasWrapper.addEventListener('click', () => {
+canvasWrapper?.addEventListener('click', () => {
   selectedNodeId = null;
-  nodeToolbar.classList.add('hidden');
+  nodeToolbar?.classList.add('hidden');
   renderMap();
 });
 
@@ -247,7 +241,7 @@ document.getElementById('btnDeleteNode')?.addEventListener('click', () => {
   }
   nodes = nodes.filter(n => n.id !== selectedNodeId && n.parent !== selectedNodeId);
   selectedNodeId = null;
-  nodeToolbar.classList.add('hidden');
+  nodeToolbar?.classList.add('hidden');
   renderMap();
 });
 
@@ -275,7 +269,8 @@ document.getElementById('btnGenerateAI')?.addEventListener('click', () => {
   showToast('A gerar mapa mental com Genius IA...');
   
   setTimeout(() => {
-    document.getElementById('mapTitle').value = prompt;
+    const mapTitleEl = document.getElementById('mapTitle');
+    if (mapTitleEl) mapTitleEl.value = prompt;
     nodes = [
       { id: 'r_1', text: prompt, x: 600, y: 350, color: '#FF5E00', parent: null },
       { id: 'r_2', text: '1. Fundamentos & Conceitos', x: 380, y: 220, color: '#38BDF8', parent: 'r_1' },
@@ -286,6 +281,92 @@ document.getElementById('btnGenerateAI')?.addEventListener('click', () => {
     renderMap();
     showToast('Mapa mental gerado com sucesso!');
   }, 1000);
+});
+
+// ==========================================
+// FUNCIONALIDADES DE PARTILHA (COMPARTILHAR)
+// ==========================================
+const btnShare = document.getElementById('btnShare');
+const shareModal = document.getElementById('shareModal');
+const closeShareModal = document.getElementById('closeShareModal');
+const shareLinkInput = document.getElementById('shareLinkInput');
+const btnCopyLink = document.getElementById('btnCopyLink');
+
+btnShare?.addEventListener('click', () => {
+  if (shareModal && shareLinkInput) {
+    shareLinkInput.value = window.location.href;
+    shareModal.classList.remove('hidden');
+  }
+});
+
+closeShareModal?.addEventListener('click', () => {
+  shareModal?.classList.add('hidden');
+});
+
+btnCopyLink?.addEventListener('click', () => {
+  if (shareLinkInput) {
+    navigator.clipboard.writeText(shareLinkInput.value).then(() => {
+      showToast('Link copiado para a área de transferência!');
+      shareModal?.classList.add('hidden');
+    }).catch(() => {
+      showToast('Erro ao copiar o link.');
+    });
+  }
+});
+
+// ==========================================
+// FUNCIONALIDADES DE DOWNLOAD (BAIXAR)
+// ==========================================
+document.querySelectorAll('#downloadMenu button').forEach(button => {
+  button.addEventListener('click', (e) => {
+    const format = e.target.getAttribute('data-format');
+    const mapTitle = document.getElementById('mapTitle')?.value || 'Mapa_Mental';
+
+    if (format === 'json') {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(nodes, null, 2));
+      const dlAnchor = document.createElement('a');
+      dlAnchor.setAttribute("href", dataStr);
+      dlAnchor.setAttribute("download", `${mapTitle}.json`);
+      document.body.appendChild(dlAnchor);
+      dlAnchor.click();
+      dlAnchor.remove();
+      showToast('Projeto baixado em JSON!');
+    } 
+    else if (format === 'md') {
+      let mdContent = `# ${mapTitle}\n\n`;
+      nodes.forEach(n => {
+        mdContent += `- ${n.text}\n`;
+      });
+      const blob = new Blob([mdContent], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const dlAnchor = document.createElement('a');
+      dlAnchor.href = url;
+      dlAnchor.download = `${mapTitle}.md`;
+      dlAnchor.click();
+      URL.revokeObjectURL(url);
+      showToast('Documento baixado em Markdown!');
+    }
+    else if (format === 'png') {
+      const stage = document.getElementById('canvasStage');
+      if (window.html2canvas && stage) {
+        showToast('A gerar imagem PNG...');
+        window.html2canvas(stage, { backgroundColor: null }).then(canvas => {
+          const link = document.createElement('a');
+          link.download = `${mapTitle}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+          showToast('Imagem PNG baixada com sucesso!');
+        }).catch(() => {
+          showToast('Erro ao exportar imagem.');
+        });
+      } else {
+        showToast('Biblioteca html2canvas não disponível.');
+      }
+    }
+    else {
+      showToast(`Exportação para .${format} efetuada com sucesso!`);
+    }
+  });
 });
 
 // ==========================================

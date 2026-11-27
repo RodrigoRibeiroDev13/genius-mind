@@ -13,31 +13,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.1.0/docx.min.js"></script>
 
   <!-- Firebase App (Core), Auth e Firestore SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-</head>
-<body>
-
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Genius Mind — Mapas Mentais</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
-
-  <!-- Bibliotecas Externas para Exportação e Leitura de Arquivos -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
-
-  <!-- Firebase App (Core), Auth e Firestore SDKs (Modo Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -76,6 +54,7 @@
     <div class="top-actions">
       <button class="btn btn-ghost" id="btnNewMap" title="Criar novo mapa limpo">+ Novo</button>
       <button class="btn btn-ghost" id="btnAutoLayout" title="Organizar nós automaticamente">⚡ Auto-Organizar</button>
+      <button class="btn btn-ghost" id="btnSave" title="Salvar no Sistema">💾 Salvar</button>
       
       <label class="btn btn-outline" title="Importar PDF, Word (.docx), SVG, JSON, MD ou TXT">
         📂 Subir Arquivo
@@ -86,9 +65,9 @@
       <div class="dropdown">
         <button class="btn btn-outline" id="btnDownloadMenu">⬇️ Baixar ▾</button>
         <div class="dropdown-menu" id="downloadMenu">
-          <button data-format="png">🖼️ Imagem PNG (Alta Resolução)</button>
+          <button data-format="png">🖼️ Imagem PNG (Recortada)</button>
           <button data-format="svg">📐 Vetor Escalável (.svg)</button>
-          <button data-format="pdf">📕 Documento PDF (.pdf)</button>
+          <button data-format="pdf">📕 Documento PDF (Recortado)</button>
           <button data-format="docx">📘 Documento Word (.docx)</button>
           <button data-format="md">📝 Texto Markdown (.md)</button>
           <button data-format="json">💾 Projeto Genius Mind (.json)</button>
@@ -96,7 +75,12 @@
       </div>
 
       <button class="btn btn-primary" id="btnShare">🔗 Compartilhar</button>
-      <button class="btn btn-outline" id="btnLoginModal">👤 Entrar</button>
+      
+      <!-- Área Dinâmica de Autenticação / Perfil / Logout -->
+      <div id="authArea" style="display: flex; align-items: center; gap: 8px;">
+        <button class="btn btn-outline" id="btnLoginModal">👤 Entrar</button>
+        <button class="btn btn-outline hidden" id="btnLogout" style="border-color: #ef4444; color: #ef4444;" title="Sair da conta">🚪 Sair</button>
+      </div>
     </div>
   </header>
 

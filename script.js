@@ -52,6 +52,15 @@ window.addEventListener('DOMContentLoaded', () => {
     centerOnNode('node-root', true);
 });
 
+// Nó raiz inicial padrão posicionado no centro do mundo virtual
+function initDefaultMap() {
+    nodes = [
+        { id: 'node-root', text: 'Meu Mapa Estratégico', x: 5000, y: 5000, parent: null, color: '#FF5E00' }
+    ];
+    render();
+    centerOnNode('node-root', true);
+}
+
 // Mensagens Toast
 function showToast(msg) {
     toastEl.textContent = msg;
@@ -85,6 +94,7 @@ function render() {
     nodes.forEach(node => {
         const el = document.createElement('div');
         el.className = `map-node ${node.id === selectedNodeId ? 'selected' : ''}`;
+        if (node.id === 'node-root') el.classList.add('root-node');
         el.id = node.id;
         el.style.left = `${node.x}px`;
         el.style.top = `${node.y}px`;
@@ -104,14 +114,17 @@ function render() {
             render();
         });
 
-        // Seleção e Arrastar Nó
+        // Seleção e Arrastar Nó (Drag & Drop fluído)
         el.addEventListener('mousedown', (e) => {
             if (el.contentEditable === 'true') return;
             selectedNodeId = node.id;
             draggingNodeId = node.id;
-            const rect = el.getBoundingClientRect();
-            dragOffsetX = (e.clientX - rect.left) / scale;
-            dragOffsetY = (e.clientY - rect.top) / scale;
+            
+            // Corrige o offset considerando o zoom ativo do stage
+            const stageRect = canvasStage.getBoundingClientRect();
+            dragOffsetX = (e.clientX - stageRect.left) / scale - node.x;
+            dragOffsetY = (e.clientY - stageRect.top) / scale - node.y;
+            
             updateNodeToolbar();
             render();
             e.stopPropagation();

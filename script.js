@@ -1,11 +1,12 @@
 // Configuração do Firebase (Compat Mode)
 const firebaseConfig = {
-    apiKey: "SUA_API_KEY",
-    authDomain: "seu-projeto.firebaseapp.com",
-    projectId: "seu-projeto",
-    storageBucket: "seu-projeto.appspot.com",
-    messagingSenderId: "123",
-    appId: "1:123"
+  apiKey: "AIzaSyAkgtZz9P_QDFqX2opRgmjTGCto7_8nW8g",
+  authDomain: "genius-mind-40d98.firebaseapp.com",
+  projectId: "genius-mind-40d98",
+  storageBucket: "genius-mind-40d98.firebasestorage.app",
+  messagingSenderId: "525115267508",
+  appId: "1:525115267508:web:500d3561fa80bb206f7ae1",
+  measurementId: "G-XT8Z62LL4N"
 };
 
 if (!firebase.apps.length) {

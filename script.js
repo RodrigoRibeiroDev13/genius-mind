@@ -17,7 +17,7 @@ const db = firebase.firestore();
 
 // Estado Global
 let nodes = [
-    { id: 'node-root', text: 'Ideia Principal', x: 5000, y: 5000, parent: null, color: '#FF5E00' }
+    { id: 'node-root', text: 'Meu Mapa Estratégico', x: 5000, y: 5000, parent: null, color: '#FF5E00' }
 ];
 let selectedNodeId = null;
 let scale = 1;
@@ -31,17 +31,19 @@ let dragOffsetX = 0;
 let dragOffsetY = 0;
 
 // Elementos DOM
-const nodesLayer = document.getElementById('nodesLayer');
-const connectionsLayer = document.getElementById('connectionsLayer');
-const canvasStage = document.getElementById('canvasStage');
-const canvasWrapper = document.getElementById('canvasWrapper');
-const zoomLabel = document.getElementById('zoomLabel');
-const nodeToolbar = document.getElementById('nodeToolbar');
-const mapTitleInput = document.getElementById('mapTitle');
-const toastEl = document.getElementById('toast');
+let nodesLayer, connectionsLayer, canvasStage, canvasWrapper, zoomLabel, nodeToolbar, mapTitleInput, toastEl;
 
-// Inicialização
-window.addEventListener('DOMContentLoaded', () => {
+// Inicialização imediata ao carregar a janela
+window.onload = () => {
+    nodesLayer = document.getElementById('nodesLayer');
+    connectionsLayer = document.getElementById('connectionsLayer');
+    canvasStage = document.getElementById('canvasStage');
+    canvasWrapper = document.getElementById('canvasWrapper');
+    zoomLabel = document.getElementById('zoomLabel');
+    nodeToolbar = document.getElementById('nodeToolbar');
+    mapTitleInput = document.getElementById('mapTitle');
+    toastEl = document.getElementById('toast');
+
     initAuth();
     initCanvasInteractions();
     initToolbarActions();
@@ -50,19 +52,11 @@ window.addEventListener('DOMContentLoaded', () => {
     loadMapFromURL();
     render();
     centerOnNode('node-root', true);
-});
-
-// Nó raiz inicial padrão posicionado no centro do mundo virtual
-function initDefaultMap() {
-    nodes = [
-        { id: 'node-root', text: 'Meu Mapa Estratégico', x: 5000, y: 5000, parent: null, color: '#FF5E00' }
-    ];
-    render();
-    centerOnNode('node-root', true);
-}
+};
 
 // Mensagens Toast
 function showToast(msg) {
+    if (!toastEl) return;
     toastEl.textContent = msg;
     toastEl.classList.remove('hidden');
     setTimeout(() => toastEl.classList.add('hidden'), 3000);
@@ -70,10 +64,11 @@ function showToast(msg) {
 
 // Renderização Geral
 function render() {
+    if (!nodesLayer || !connectionsLayer) return;
     nodesLayer.innerHTML = '';
     connectionsLayer.innerHTML = '';
 
-    // Desenhar Linhas
+    // Desenhar Linhas de Conexão
     nodes.forEach(node => {
         if (node.parent) {
             const parent = nodes.find(n => n.id === node.parent);
@@ -120,7 +115,6 @@ function render() {
             selectedNodeId = node.id;
             draggingNodeId = node.id;
             
-            // Corrige o offset considerando o zoom ativo do stage
             const stageRect = canvasStage.getBoundingClientRect();
             dragOffsetX = (e.clientX - stageRect.left) / scale - node.x;
             dragOffsetY = (e.clientY - stageRect.top) / scale - node.y;
@@ -188,7 +182,7 @@ function initCanvasInteractions() {
         panY = mouseY - (mouseY - panY) * (scale / oldScale);
 
         applyTransform();
-        zoomLabel.textContent = `${Math.round(scale * 100)}%`;
+        if (zoomLabel) zoomLabel.textContent = `${Math.round(scale * 100)}%`;
     }, { passive: false });
 
     document.getElementById('btnZoomIn').onclick = () => { scale = Math.min(scale * 1.2, 2.5); applyTransform(); zoomLabel.textContent = `${Math.round(scale * 100)}%`; };
@@ -289,7 +283,7 @@ function initToolbarActions() {
 
     document.getElementById('btnNewMap').onclick = () => {
         if (confirm('Criar um novo mapa apagará o atual não guardado. Continuar?')) {
-            nodes = [{ id: 'node-root', text: 'Nova Ideia', x: 5000, y: 5000, parent: null, color: '#FF5E00' }];
+            nodes = [{ id: 'node-root', text: 'Meu Mapa Estratégico', x: 5000, y: 5000, parent: null, color: '#FF5E00' }];
             mapTitleInput.value = 'Meu Mapa Estratégico';
             selectedNodeId = null;
             render();
@@ -297,7 +291,6 @@ function initToolbarActions() {
         }
     };
 
-    // Auto-Organizar nós de forma simples em árvore
     document.getElementById('btnAutoLayout').onclick = () => {
         const root = nodes.find(n => !n.parent);
         if (!root) return;
@@ -313,7 +306,6 @@ function initToolbarActions() {
         showToast('Mapa auto-organizado!');
     };
 
-    // Salvar no Sistema / Firestore
     document.getElementById('btnSave').onclick = async () => {
         const user = auth.currentUser;
         if (!user) {
@@ -335,7 +327,6 @@ function initToolbarActions() {
         }
     };
 
-    // Partilhar
     document.getElementById('btnShare').onclick = async () => {
         const mapId = 'map_' + Date.now();
         await db.collection('maps').doc(mapId).set({
@@ -375,7 +366,7 @@ async function loadMapFromURL() {
     }
 }
 
-// Menus de Download e Exportação Otimizada (Recortada)
+// Menus de Download e Exportação
 function initDownloadMenu() {
     document.querySelectorAll('#downloadMenu button').forEach(btn => {
         btn.onclick = async () => {
@@ -388,7 +379,7 @@ function initDownloadMenu() {
                 const blob = new Blob([md], { type: 'text/markdown' });
                 downloadBlob(blob, `${mapTitleInput.value}.md`);
             } else if (format === 'png' || format === 'pdf') {
-                showToast('A gerar documento recortado...');
+                showToast('A gerar documento...');
                 const canvas = await html2canvas(nodesLayer, { backgroundColor: '#0f172a', scale: 2 });
                 if (format === 'png') {
                     const link = document.createElement('a');
@@ -427,7 +418,7 @@ function downloadBlob(blob, filename) {
     URL.revokeObjectURL(url);
 }
 
-// Leitura de Arquivos e IA simulada
+// Leitura de Arquivos e IA
 function initAIAndFiles() {
     document.getElementById('btnGenerateAI').onclick = () => {
         const prompt = document.getElementById('aiPromptInput').value.trim();

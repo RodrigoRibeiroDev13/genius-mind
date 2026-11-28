@@ -81,29 +81,27 @@
     </div>
   </header>
 
-  <!-- Área de Prompt IA e Controlos Abaixo -->
+  <!-- Painel Superior Central (Com Aviso acima e Renomear grande abaixo da IA) -->
   <section class="ai-prompt-container">
+    <div class="ai-notice-text">
+      ⚠️ <strong>Em breve!</strong> Enquanto isso você deve utilizar: <span>Claude, ChatGPT ou Gemini</span>
+    </div>
+
     <div class="ai-prompt-bar">
       <div class="ai-badge">✨ Genius IA</div>
       <input type="text" id="aiPromptInput" placeholder="Digite um tema, ideia ou cole um resumo para gerar o mapa mental..." />
       <button class="btn btn-primary" id="btnGenerateAI">Gerar Mapa</button>
     </div>
     
-    <!-- Painel de Renomear e Aviso de IA -->
-    <div class="map-sub-controls">
-      <div class="rename-inline-group">
-        <label for="mapTitle">Renomear Mapa:</label>
-        <input type="text" id="mapTitle" value="Meu Mapa Estratégico" title="Digite para renomear o mapa atual" />
-      </div>
-      <div class="ai-notice-text">
-        ⚠️ <strong>Em breve!</strong> Enquanto isso você deve utilizar: <span>Claude, ChatGPT ou Gemini</span>
-      </div>
+    <div class="rename-wide-group">
+      <label for="mapTitle">🗺️ Nome do Mapa:</label>
+      <input type="text" id="mapTitle" value="Meu Mapa Estratégico" title="Digite para renomear o mapa atual" />
     </div>
   </section>
 
-  <!-- Barra Contextual de Nó -->
+  <!-- Barra Contextual do Nó -->
   <div class="node-toolbar hidden" id="nodeToolbar">
-    <button class="tool-btn" id="btnEditNodeText" title="Editar texto do nó">✏️ Editar</button>
+    <button class="tool-btn" id="btnEditNodeText" title="Editar texto e formatação">✏️ Editar</button>
     <button class="tool-btn" id="btnAddChild" title="Adicionar sub-tópico">+ Filho</button>
     <button class="tool-btn" id="btnAddSibling" title="Adicionar tópico irmão">+ Irmão</button>
     <div class="divider"></div>
@@ -125,7 +123,34 @@
     </div>
   </main>
 
-  <input type="text" id="inlineEditInput" class="hidden" placeholder="Novo texto..." />
+  <!-- Modal / Caixa Avançada de Edição de Texto no Meio da Tela -->
+  <div class="modal-backdrop hidden" id="advancedEditModal">
+    <div class="modal-card edit-advanced-card">
+      <div class="modal-header">
+        <h3>✏️ Editar Texto & Estilo do Nó</h3>
+        <button class="close-modal" id="closeEditModal">✕</button>
+      </div>
+      
+      <!-- Barra de Ferramentas de Formatação -->
+      <div class="format-toolbar">
+        <button type="button" class="fmt-btn" data-cmd="bold" title="Negrito"><b>B</b></button>
+        <button type="button" class="fmt-btn" data-cmd="italic" title="Itálico"><i>I</i></button>
+        <button type="button" class="fmt-btn" data-cmd="underline" title="Sublinhar"><u>U</u></button>
+        <div class="divider"></div>
+        <button type="button" class="fmt-btn" data-cmd="justifyLeft" title="Alinhar à Esquerda">⬅️</button>
+        <button type="button" class="fmt-btn" data-cmd="justifyCenter" title="Centralizar">⏹️</button>
+        <button type="button" class="fmt-btn" data-cmd="justifyRight" title="Alinhar à Direita">➡️</button>
+      </div>
+
+      <!-- Caixa de Texto Editável e Redimensionável (Resize ativado) -->
+      <div id="modalEditableArea" contenteditable="true" class="editable-content-box" placeholder="Digite o conteúdo do tópico aqui..."></div>
+
+      <div class="modal-actions" style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-outline" id="btnCancelEdit">Cancelar</button>
+        <button class="btn btn-primary" id="btnSaveEdit">Salvar Alterações</button>
+      </div>
+    </div>
+  </div>
 
   <footer class="bottom-controls">
     <div class="shortcuts-hint">
@@ -140,7 +165,7 @@
     </div>
   </footer>
 
-  <!-- Modais -->
+  <!-- Modais Principais -->
   <div class="modal-backdrop hidden" id="myMapsModal">
     <div class="modal-card" style="max-width: 580px;">
       <div class="modal-header">

@@ -55,19 +55,6 @@ body, html {
   color: var(--gm-orange);
 }
 
-#mapTitle {
-  background: transparent;
-  border: none;
-  color: var(--gm-muted);
-  font-size: 0.85rem;
-  font-weight: 500;
-  padding: 2px 6px;
-  border-radius: 4px;
-  outline: none;
-  width: 180px;
-}
-#mapTitle:focus { background: rgba(255,255,255,0.05); color: #fff; }
-
 .top-actions {
   display: flex;
   gap: 8px;
@@ -120,11 +107,22 @@ body, html {
 .dropdown-menu button:hover { background: rgba(255,255,255,0.08); }
 .dropdown:hover .dropdown-menu { display: block; }
 
-.ai-prompt-bar {
+/* Contentor do Prompt IA e controlos abaixo */
+.ai-prompt-container {
   position: fixed;
-  top: 76px;
+  top: 74px;
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  z-index: 90;
+  width: 90%;
+  max-width: 600px;
+}
+
+.ai-prompt-bar {
   background: var(--gm-card);
   border: 1px solid var(--gm-border);
   padding: 6px 6px 6px 14px;
@@ -132,10 +130,8 @@ body, html {
   display: flex;
   align-items: center;
   gap: 10px;
-  z-index: 90;
-  width: 90%;
-  max-width: 550px;
   box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+  width: 100%;
 }
 
 .ai-badge {
@@ -145,9 +141,54 @@ body, html {
   color: var(--gm-orange-light);
   padding: 4px 8px;
   border-radius: 20px;
+  white-space: nowrap;
 }
 
 #aiPromptInput { flex: 1; background: transparent; border: none; color: #fff; outline: none; font-size: 0.85rem; }
+
+/* Sub-controlos abaixo da IA (Renomear e Aviso) */
+.map-sub-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0 4px;
+  font-size: 0.78rem;
+  color: var(--gm-muted);
+}
+
+.rename-inline-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(30, 41, 59, 0.8);
+  padding: 3px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--gm-border);
+}
+
+#mapTitle {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  outline: none;
+  width: 140px;
+}
+
+.ai-notice-text {
+  background: rgba(15, 23, 42, 0.85);
+  padding: 3px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--gm-border);
+  color: var(--gm-muted);
+}
+
+.ai-notice-text span {
+  color: var(--gm-orange-light);
+  font-weight: 600;
+}
 
 .node-toolbar {
   position: absolute;
@@ -234,7 +275,6 @@ body, html {
 .map-node.selected { border-color: var(--gm-orange); box-shadow: 0 0 0 3px rgba(255, 94, 0, 0.3); }
 .map-node.root-node { background: linear-gradient(135deg, #FF8C00, #FF5500); border-color: #FF5E00; }
 
-/* Input de edição rápida posicionado diretamente sobre o canvas */
 #inlineEditInput {
   position: absolute;
   z-index: 300;

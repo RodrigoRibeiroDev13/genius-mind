@@ -29,7 +29,7 @@ let draggingNodeId = null;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 
-let nodesLayer, connectionsLayer, canvasStage, canvasWrapper, zoomLabel, nodeToolbar, mapTitleInput, toastEl;
+let nodesLayer, connectionsLayer, canvasStage, canvasWrapper, zoomLabel, nodeToolbar, mapTitleInput, toastEl, inlineEditInput;
 
 window.onload = () => {
     nodesLayer = document.getElementById('nodesLayer');
@@ -40,6 +40,7 @@ window.onload = () => {
     nodeToolbar = document.getElementById('nodeToolbar');
     mapTitleInput = document.getElementById('mapTitle');
     toastEl = document.getElementById('toast');
+    inlineEditInput = document.getElementById('inlineEditInput');
 
     initAuth();
     initCanvasInteractions();
@@ -60,13 +61,13 @@ function showToast(msg) {
     setTimeout(() => toastEl.classList.add('hidden'), 3000);
 }
 
-// Renderização Geral de Nós e Linhas Dinâmicas (SVG)
+// Renderização Geral
 function render() {
     if (!nodesLayer || !connectionsLayer) return;
     nodesLayer.innerHTML = '';
     connectionsLayer.innerHTML = '';
 
-    // 1. Desenhar Linhas de Conexão SVG em tempo real baseadas na posição exata dos nós
+    // 1. Linhas SVG dinâmicas em tempo real
     nodes.forEach(node => {
         if (node.parent) {
             const parent = nodes.find(n => n.id === node.parent);
@@ -87,7 +88,7 @@ function render() {
         }
     });
 
-    // 2. Desenhar Nós Interativos
+    // 2. Nós Interativos
     nodes.forEach(node => {
         const el = document.createElement('div');
         el.className = `map-node ${node.id === selectedNodeId ? 'selected' : ''}`;
@@ -98,22 +99,21 @@ function render() {
         el.style.borderColor = node.color || '#334155';
         el.textContent = node.text;
 
-        // Clique simples para selecionar o nó e exibir a barra flutuante
         el.addEventListener('click', (e) => {
             selectedNodeId = node.id;
+            fecharInputEdicao();
             updateNodeToolbar();
             render();
             e.stopPropagation();
         });
 
-        // Duplo clique aciona diretamente a edição fiável
         el.addEventListener('dblclick', (e) => {
             e.stopPropagation();
-            abrirEditorTexto(node.id);
+            abrirInputEdicao(node.id);
         });
 
-        // Arrastar Nó (Drag & Drop com atualização fluída das linhas em tempo real)
         el.addEventListener('mousedown', (e) => {
+            fecharInputEdicao();
             selectedNodeId = node.id;
             draggingNodeId = node.id;
             
@@ -132,16 +132,50 @@ function render() {
     updateNodeToolbar();
 }
 
-// Função de edição de texto 100% fiável por prompt/input controlado
-function abrirEditorTexto(nodeId) {
+// SISTEMA DE EDIÇÃO DIRETA COM INPUT FLUTUANTE (Sem falhas!)
+function abrirInputEdicao(nodeId) {
     const node = nodes.find(n => n.id === nodeId);
-    if (!node) return;
+    if (!node || !inlineEditInput) return;
 
-    const novoTexto = prompt("Editar texto do subtópico:", node.text);
-    if (novoTexto !== null) {
-        node.text = novoTexto.trim() || 'Sem título';
-        render();
-        showToast('Texto atualizado com sucesso!');
+    selectedNodeId = nodeId;
+    inlineEditInput.value = node.text;
+    inlineEditInput.classList.remove('hidden');
+
+    // Posiciona o input exatamente em cima do nó no canvas
+    inlineEditInput.style.left = `${node.x}px`;
+    inlineEditInput.style.top = `${node.y}px`;
+    inlineEditInput.focus();
+    inlineEditInput.select();
+
+    // Ao pressionar Enter ou perder o foco, guarda o texto e oculta o input
+    inlineEditInput.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+            salvarEdicaoInput(nodeId);
+        } else if (e.key === 'Escape') {
+            fecharInputEdicao();
+        }
+    };
+
+    inlineEditInput.onblur = () => {
+        salvarEdicaoInput(nodeId);
+    };
+}
+
+function salvarEdicaoInput(nodeId) {
+    if (!inlineEditInput || inlineEditInput.classList.contains('hidden')) return;
+    const node = nodes.find(n => n.id === nodeId);
+    if (node) {
+        node.text = inlineEditInput.value.trim() || 'Sem título';
+    }
+    fecharInputEdicao();
+    render();
+}
+
+function fecharInputEdicao() {
+    if (inlineEditInput) {
+        inlineEditInput.classList.add('hidden');
+        inlineEditInput.onblur = null;
+        inlineEditInput.onkeydown = null;
     }
 }
 
@@ -153,6 +187,7 @@ function initCanvasInteractions() {
             startX = e.clientX - panX;
             startY = e.clientY - panY;
             selectedNodeId = null;
+            fecharInputEdicao();
             render();
         }
     });
@@ -168,7 +203,8 @@ function initCanvasInteractions() {
                 const stageRect = canvasStage.getBoundingClientRect();
                 node.x = (e.clientX - stageRect.left) / scale - dragOffsetX;
                 node.y = (e.clientY - stageRect.top) / scale - dragOffsetY;
-                render(); // Recalcula as linhas SVG em tempo real à medida que arrastas!
+                fecharInputEdicao();
+                render(); // Linhas atualizam em tempo real
             }
         }
     });
@@ -239,10 +275,10 @@ function updateNodeToolbar() {
 }
 
 function initToolbarActions() {
-    // Botão "Editar" na barra flutuante agora chama a função de edição de texto com segurança
+    // Botão Editar na barra flutuante
     document.getElementById('btnEditNodeText').onclick = () => {
         if (selectedNodeId) {
-            abrirEditorTexto(selectedNodeId);
+            abrirInputEdicao(selectedNodeId);
         }
     };
 
@@ -366,7 +402,7 @@ function initToolbarActions() {
     };
 }
 
-// Gestão de "Meus Mapas" com opção de Excluir 🗑️
+// Gestão de "Meus Mapas" com Exclusão
 function initMyMapsModal() {
     const modal = document.getElementById('myMapsModal');
     const btn = document.getElementById('btnMyMaps');
@@ -606,7 +642,7 @@ function initAuth() {
         const pass = authPassword.value;
         try {
             if (isRegistering) {
-                await auth.createUserWithEmailProvider ? null : auth.createUserWithEmailAndPassword(email, pass);
+                await auth.createUserWithEmailAndPassword(email, pass);
                 showToast('Conta criada com sucesso!');
             } else {
                 await auth.signInWithEmailAndPassword(email, pass);

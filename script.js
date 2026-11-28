@@ -15,7 +15,7 @@ if (!firebase.apps.length) {
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Estado Global
+// Estado Global inicializado exatamente no centro do mundo virtual (5000, 5000)
 let nodes = [
     { id: 'node-root', text: 'Meu Mapa Estratégico', x: 5000, y: 5000, parent: null, color: '#FF5E00' }
 ];
@@ -50,8 +50,10 @@ window.onload = () => {
     initDownloadMenu();
     initAIAndFiles();
     loadMapFromURL();
+    
+    // Centralização inicial garantida e imediata no nó raiz
+    centerOnNode('node-root');
     render();
-    centerOnNode('node-root', true);
 };
 
 // Mensagens Toast
@@ -68,18 +70,22 @@ function render() {
     nodesLayer.innerHTML = '';
     connectionsLayer.innerHTML = '';
 
-    // Desenhar Linhas de Conexão
+    // Desenhar Linhas de Conexão com curvas suaves ou retas precisas
     nodes.forEach(node => {
         if (node.parent) {
             const parent = nodes.find(n => n.id === node.parent);
             if (parent) {
-                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                line.setAttribute('x1', parent.x + 80);
-                line.setAttribute('y1', parent.y + 30);
-                line.setAttribute('x2', node.x + 80);
-                line.setAttribute('y2', node.y + 30);
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const x1 = parent.x + 90;
+                const y1 = parent.y + 30;
+                const x2 = node.x + 90;
+                const y2 = node.y + 30;
+                const curve = `M ${x1} ${y1} C ${x1 + 60} ${y1}, ${x2 - 60} ${y2}, ${x2} ${y2}`;
+                
+                line.setAttribute('d', curve);
                 line.setAttribute('stroke', node.color || '#334155');
-                line.setAttribute('stroke-width', '2.5');
+                line.setAttribute('stroke-width', '3');
+                line.setAttribute('fill', 'none');
                 connectionsLayer.appendChild(line);
             }
         }
@@ -187,18 +193,18 @@ function initCanvasInteractions() {
 
     document.getElementById('btnZoomIn').onclick = () => { scale = Math.min(scale * 1.2, 2.5); applyTransform(); zoomLabel.textContent = `${Math.round(scale * 100)}%`; };
     document.getElementById('btnZoomOut').onclick = () => { scale = Math.max(scale / 1.2, 0.3); applyTransform(); zoomLabel.textContent = `${Math.round(scale * 100)}%`; };
-    document.getElementById('btnZoomReset').onclick = () => { scale = 1; panX = 0; panY = 0; applyTransform(); zoomLabel.textContent = '100%'; centerOnNode('node-root', true); };
+    document.getElementById('btnZoomReset').onclick = () => { scale = 1; applyTransform(); zoomLabel.textContent = '100%'; centerOnNode('node-root'); };
 }
 
 function applyTransform() {
     canvasStage.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
 }
 
-function centerOnNode(nodeId, smooth = false) {
+function centerOnNode(nodeId) {
     const node = nodes.find(n => n.id === nodeId);
     if (!node) return;
-    const wrapperW = canvasWrapper.clientWidth;
-    const wrapperH = canvasWrapper.clientHeight;
+    const wrapperW = canvasWrapper.clientWidth || window.innerWidth;
+    const wrapperH = canvasWrapper.clientHeight || window.innerHeight;
     panX = wrapperW / 2 - node.x;
     panY = wrapperH / 2 - node.y;
     applyTransform();
@@ -233,8 +239,8 @@ function initToolbarActions() {
         nodes.push({
             id: newId,
             text: 'Novo Subtópico',
-            x: parent.x + 220,
-            y: parent.y + (Math.random() * 100 - 50),
+            x: parent.x + 240,
+            y: parent.y + (Math.random() * 120 - 60),
             parent: parent.id,
             color: parent.color
         });
@@ -250,7 +256,7 @@ function initToolbarActions() {
             id: newId,
             text: 'Novo Tópico',
             x: node.x,
-            y: node.y + 90,
+            y: node.y + 100,
             parent: node.parent,
             color: node.color
         });
@@ -286,8 +292,8 @@ function initToolbarActions() {
             nodes = [{ id: 'node-root', text: 'Meu Mapa Estratégico', x: 5000, y: 5000, parent: null, color: '#FF5E00' }];
             mapTitleInput.value = 'Meu Mapa Estratégico';
             selectedNodeId = null;
+            centerOnNode('node-root');
             render();
-            centerOnNode('node-root', true);
         }
     };
 
@@ -299,8 +305,8 @@ function initToolbarActions() {
         
         const children = nodes.filter(n => n.parent === root.id);
         children.forEach((child, idx) => {
-            child.x = root.x + 300;
-            child.y = root.y + (idx - children.length / 2) * 120;
+            child.x = root.x + 320;
+            child.y = root.y + (idx - children.length / 2) * 130;
         });
         render();
         showToast('Mapa auto-organizado!');
@@ -342,7 +348,7 @@ function initToolbarActions() {
     document.getElementById('closeShareModal').onclick = () => document.getElementById('shareModal').classList.add('hidden');
     document.getElementById('btnCopyLink').onclick = () => {
         navigator.clipboard.writeText(document.getElementById('shareLinkInput').value);
-        showToast('Link copiado para a área de transferência!');
+        showToast('Link copiado!');
     };
 }
 
@@ -357,6 +363,7 @@ async function loadMapFromURL() {
                 const data = doc.data();
                 nodes = data.nodes || nodes;
                 mapTitleInput.value = data.title || 'Mapa Partilhado';
+                centerOnNode('node-root');
                 render();
                 showToast('Mapa carregado com sucesso!');
             }
@@ -426,12 +433,12 @@ function initAIAndFiles() {
         
         nodes = [
             { id: 'node-root', text: prompt, x: 5000, y: 5000, parent: null, color: '#FF5E00' },
-            { id: 'n-1', text: 'Conceito Inicial', x: 5250, y: 4900, parent: 'node-root', color: '#38BDF8' },
-            { id: 'n-2', text: 'Aplicações Práticas', x: 5250, y: 5000, parent: 'node-root', color: '#4ADE80' },
-            { id: 'n-3', text: 'Próximos Passos', x: 5250, y: 5100, parent: 'node-root', color: '#A855F7' }
+            { id: 'n-1', text: 'Conceito Inicial', x: 5300, y: 4900, parent: 'node-root', color: '#38BDF8' },
+            { id: 'n-2', text: 'Aplicações Práticas', x: 5300, y: 5000, parent: 'node-root', color: '#4ADE80' },
+            { id: 'n-3', text: 'Próximos Passos', x: 5300, y: 5100, parent: 'node-root', color: '#A855F7' }
         ];
+        centerOnNode('node-root');
         render();
-        centerOnNode('node-root', true);
         showToast('Mapa gerado com sucesso!');
     };
 
@@ -450,12 +457,12 @@ function initAIAndFiles() {
                     let lastId = 'node-root';
                     lines.forEach((line, idx) => {
                         const id = 'node-' + idx;
-                        nodes.push({ id, text: line.trim(), x: 5250, y: 4900 + (idx * 80), parent: lastId, color: '#38BDF8' });
+                        nodes.push({ id, text: line.trim(), x: 5300, y: 4900 + (idx * 90), parent: lastId, color: '#38BDF8' });
                         lastId = id;
                     });
                 }
+                centerOnNode('node-root');
                 render();
-                centerOnNode('node-root', true);
                 showToast('Ficheiro importado com sucesso!');
             } catch (err) {
                 showToast('Erro ao ler o ficheiro.');

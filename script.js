@@ -65,34 +65,38 @@ function showToast(msg) {
     setTimeout(() => toastEl.classList.add('hidden'), 3000);
 }
 
-// Renderização Geral
+// Renderização Geral de Nós e Linhas Dinâmicas (SVG)
 function render() {
     if (!nodesLayer || !connectionsLayer) return;
     nodesLayer.innerHTML = '';
     connectionsLayer.innerHTML = '';
 
-    // Desenhar Linhas de Conexão com curvas suaves
+    // 1. Desenhar Linhas de Conexão Dinâmicas entre Pai e Filho
     nodes.forEach(node => {
         if (node.parent) {
             const parent = nodes.find(n => n.id === node.parent);
             if (parent) {
                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                const x1 = parent.x + 90;
+                
+                // Pontos de ancoragem dinâmicos (centro das caixas considerando largura média de 200px e altura de 60px)
+                const x1 = parent.x + 100;
                 const y1 = parent.y + 30;
-                const x2 = node.x + 90;
+                const x2 = node.x + 100;
                 const y2 = node.y + 30;
-                const curve = `M ${x1} ${y1} C ${x1 + 60} ${y1}, ${x2 - 60} ${y2}, ${x2} ${y2}`;
+                
+                // Curva Bézier suave conectando os nós
+                const curve = `M ${x1} ${y1} C ${x1 + 80} ${y1}, ${x2 - 80} ${y2}, ${x2} ${y2}`;
                 
                 line.setAttribute('d', curve);
                 line.setAttribute('stroke', node.color || '#334155');
-                line.setAttribute('stroke-width', '3');
+                line.setAttribute('stroke-width', '3.5');
                 line.setAttribute('fill', 'none');
                 connectionsLayer.appendChild(line);
             }
         }
     });
 
-    // Desenhar Nós
+    // 2. Desenhar Nós do Mapa Interativos
     nodes.forEach(node => {
         const el = document.createElement('div');
         el.className = `map-node ${node.id === selectedNodeId ? 'selected' : ''}`;
@@ -111,23 +115,38 @@ function render() {
             e.stopPropagation();
         });
 
-        // Duplo clique para editar texto diretamente com foco imediato
+        // Duplo clique rigoroso para ativar edição de texto imediata
         el.addEventListener('dblclick', (e) => {
             e.stopPropagation();
             el.contentEditable = true;
             el.focus();
-            document.execCommand('selectAll', false, null);
+            
+            // Seleciona todo o texto automaticamente para facilitar a reescrita
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
         });
 
+        // Salvar alterações ao retirar o foco (blur)
         el.addEventListener('blur', () => {
             el.contentEditable = false;
             node.text = el.textContent.trim() || 'Sem título';
             render();
         });
 
-        // Seleção e Arrastar Nó (Drag & Drop fluído)
+        // Prevenir perda de foco ao pressionar Enter dentro da caixa (opcionalmente pode salvar ou ignorar)
+        el.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                el.blur();
+            }
+        });
+
+        // Seleção e Arrastar Nó (Drag & Drop fluído com atualização em tempo real das linhas)
         el.addEventListener('mousedown', (e) => {
-            if (el.contentEditable === 'true') return;
+            if (el.contentEditable === 'true') return; // Não arrasta se estiver a editar texto
             selectedNodeId = node.id;
             draggingNodeId = node.id;
             
@@ -169,7 +188,7 @@ function initCanvasInteractions() {
                 const stageRect = canvasStage.getBoundingClientRect();
                 node.x = (e.clientX - stageRect.left) / scale - dragOffsetX;
                 node.y = (e.clientY - stageRect.top) / scale - dragOffsetY;
-                render();
+                render(); // As linhas atualizam dinamicamente aqui em tempo real!
             }
         }
     });
@@ -179,7 +198,7 @@ function initCanvasInteractions() {
         draggingNodeId = null;
     });
 
-    // Zoom centralizado
+    // Zoom centralizado baseado na roda do rato
     canvasWrapper.addEventListener('wheel', (e) => {
         e.preventDefault();
         const zoomFactor = 1.1;
@@ -220,7 +239,7 @@ function centerOnNode(nodeId) {
     applyTransform();
 }
 
-// Barra de Ações do Nó
+// Barra de Ações do Nó (Contextual)
 function updateNodeToolbar() {
     if (!selectedNodeId) {
         nodeToolbar.classList.add('hidden');
@@ -249,7 +268,7 @@ function initToolbarActions() {
         nodes.push({
             id: newId,
             text: 'Novo Subtópico',
-            x: parent.x + 240,
+            x: parent.x + 260,
             y: parent.y + (Math.random() * 120 - 60),
             parent: parent.id,
             color: parent.color
@@ -266,7 +285,7 @@ function initToolbarActions() {
             id: newId,
             text: 'Novo Tópico',
             x: node.x,
-            y: node.y + 100,
+            y: node.y + 110,
             parent: node.parent,
             color: node.color
         });
@@ -316,7 +335,7 @@ function initToolbarActions() {
         const children = nodes.filter(n => n.parent === root.id);
         children.forEach((child, idx) => {
             child.x = root.x + 320;
-            child.y = root.y + (idx - children.length / 2) * 130;
+            child.y = root.y + (idx - children.length / 2) * 140;
         });
         render();
         showToast('Mapa auto-organizado!');
@@ -362,7 +381,7 @@ function initToolbarActions() {
     };
 }
 
-// Gestão da Modal "Meus Mapas"
+// Gestão da Modal "Meus Mapas" (Listagem Firestore)
 function initMyMapsModal() {
     const modal = document.getElementById('myMapsModal');
     const btn = document.getElementById('btnMyMaps');
@@ -543,7 +562,7 @@ function initAIAndFiles() {
     };
 }
 
-// Autenticação e Logout
+// Autenticação (Firebase)
 function initAuth() {
     const authModal = document.getElementById('authModal');
     const btnLoginModal = document.getElementById('btnLoginModal');

@@ -29,7 +29,7 @@ let draggingNodeId = null;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 
-let nodesLayer, connectionsLayer, canvasStage, canvasWrapper, zoomLabel, nodeToolbar, mapTitleInput, mapTitleTopInput, toastEl, advancedEditModal, modalEditableArea;
+let nodesLayer, connectionsLayer, canvasStage, canvasWrapper, zoomLabel, nodeToolbar, mapTitleInput, mapTitleTopInput, toastEl, advancedEditModal, modalEditableArea, fontSizeIndicator;
 
 window.onload = () => {
     nodesLayer = document.getElementById('nodesLayer');
@@ -43,8 +43,8 @@ window.onload = () => {
     toastEl = document.getElementById('toast');
     advancedEditModal = document.getElementById('advancedEditModal');
     modalEditableArea = document.getElementById('modalEditableArea');
+    fontSizeIndicator = document.getElementById('fontSizeIndicator');
 
-    // Sincronizar os campos de renomear mapa
     if (mapTitleInput && mapTitleTopInput) {
         mapTitleInput.oninput = (e) => { mapTitleTopInput.value = e.target.value; };
         mapTitleTopInput.oninput = (e) => { mapTitleInput.value = e.target.value; };
@@ -76,7 +76,6 @@ function render() {
     nodesLayer.innerHTML = '';
     connectionsLayer.innerHTML = '';
 
-    // 1. Linhas SVG centradas com base no tamanho individual de cada nó
     nodes.forEach(node => {
         if (node.parent) {
             const parent = nodes.find(n => n.id === node.parent);
@@ -104,7 +103,6 @@ function render() {
         }
     });
 
-    // 2. Nós Interativos com dimensões customizadas
     nodes.forEach(node => {
         const el = document.createElement('div');
         el.className = `map-node ${node.id === selectedNodeId ? 'selected' : ''}`;
@@ -150,13 +148,16 @@ function render() {
     updateNodeToolbar();
 }
 
-// Editor Avançado com botões de tamanho de letra e da caixa
+// Editor Avançado com Pré-visualização ao vivo
 function abrirEditorAvancado(nodeId) {
     const node = nodes.find(n => n.id === nodeId);
     if (!node || !advancedEditModal) return;
 
     selectedNodeId = nodeId;
     modalEditableArea.innerHTML = node.text;
+    modalEditableArea.style.fontSize = `${node.fontSize || 14}px`;
+    if (fontSizeIndicator) fontSizeIndicator.textContent = `Tamanho da fonte: ${node.fontSize || 14}px`;
+
     advancedEditModal.classList.remove('hidden');
     modalEditableArea.focus();
 }
@@ -173,35 +174,42 @@ function initAdvancedEditor() {
         }
     });
 
-    // Botões para aumentar/diminuir letra e caixa
+    // Aumentar/Diminuir Letra diretamente com pré-visualização instantânea na caixinha
     document.getElementById('btnFontPlus').onclick = () => {
         const node = nodes.find(n => n.id === selectedNodeId);
         if (node) {
             node.fontSize = (node.fontSize || 14) + 2;
-            render();
+            modalEditableArea.style.fontSize = `${node.fontSize}px`;
+            if (fontSizeIndicator) fontSizeIndicator.textContent = `Tamanho da fonte: ${node.fontSize}px`;
         }
     };
+
     document.getElementById('btnFontMinus').onclick = () => {
         const node = nodes.find(n => n.id === selectedNodeId);
         if (node) {
             node.fontSize = Math.max(10, (node.fontSize || 14) - 2);
-            render();
+            modalEditableArea.style.fontSize = `${node.fontSize}px`;
+            if (fontSizeIndicator) fontSizeIndicator.textContent = `Tamanho da fonte: ${node.fontSize}px`;
         }
     };
+
     document.getElementById('btnBoxLarger').onclick = () => {
         const node = nodes.find(n => n.id === selectedNodeId);
         if (node) {
             node.width = (node.width || 180) + 40;
             node.height = (node.height || 60) + 15;
             render();
+            showToast('Caixa expandida!');
         }
     };
+
     document.getElementById('btnBoxSmaller').onclick = () => {
         const node = nodes.find(n => n.id === selectedNodeId);
         if (node) {
             node.width = Math.max(120, (node.width || 180) - 40);
             node.height = Math.max(45, (node.height || 60) - 15);
             render();
+            showToast('Caixa reduzida!');
         }
     };
 

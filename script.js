@@ -19,7 +19,7 @@ let nodes = [
     { id: 'node-root', text: 'Meu Mapa Estratégico', x: 5000, y: 5000, parent: null, color: '#FF5E00', width: 180, height: 60, fontSize: 14 }
 ];
 let selectedNodeId = null;
-let currentLoadedMapId = null; // Armazena o ID do mapa atual se já estiver salvo
+let currentLoadedMapId = null; 
 let scale = 1;
 let panX = 0;
 let panY = 0;
@@ -427,7 +427,6 @@ function initToolbarActions() {
         showToast('Mapa auto-organizado!');
     };
 
-    // Botão Salvar com verificação de nome duplicado e sobrescrita
     document.getElementById('btnSave').onclick = async () => {
         const user = auth.currentUser;
         if (!user) {
@@ -438,7 +437,6 @@ function initToolbarActions() {
         try {
             const currentTitle = (mapTitleInput ? mapTitleInput.value : 'Meu Mapa Estratégico').trim();
             
-            // Verificar se já existe um mapa com este mesmo nome para este utilizador
             const querySnapshot = await db.collection('maps')
                 .where('owner', '==', user.uid)
                 .where('title', '==', currentTitle)
@@ -448,7 +446,6 @@ function initToolbarActions() {
 
             if (!querySnapshot.empty) {
                 const existingDoc = querySnapshot.docs[0];
-                // Se o mapa encontrado for diferente do que está aberto atualmente
                 if (!targetMapId || targetMapId !== existingDoc.id) {
                     const desejaSobrescrever = confirm(`Já existe um mapa com o nome "${currentTitle}". Deseja sobrescrever/atualizar o mapa existente?`);
                     if (!desejaSobrescrever) {
@@ -627,7 +624,7 @@ async function loadMapFromURL() {
     }
 }
 
-// Menus de Download
+// Menus de Download Corrigidos e Otimizados
 function initDownloadMenu() {
     document.querySelectorAll('#downloadMenu button').forEach(btn => {
         btn.onclick = async () => {
@@ -636,7 +633,44 @@ function initDownloadMenu() {
             
             try {
                 if (format === 'svg') {
-                    const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="10000" height="10000">${connectionsLayer.innerHTML}${nodesLayer.innerHTML}</svg>`;
+                    // SVG Completo e bem estruturado contendo as linhas e nós estilizados
+                    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                    nodes.forEach(n => {
+                        const w = n.width || 180;
+                        const h = n.height || 60;
+                        if (n.x < minX) minX = n.x;
+                        if (n.y < minY) minY = n.y;
+                        if (n.x + w > maxX) maxX = n.x + w;
+                        if (n.y + h > maxY) maxY = n.y + h;
+                    });
+                    minX -= 60; minY -= 60; maxX += 60; maxY += 60;
+                    const width = maxX - minX;
+                    const height = maxY - minY;
+
+                    const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="${minX} ${minY} ${width} ${height}" width="${width}" height="${height}">
+  <style>
+    .map-node { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 600; fill: #FFFFFF; }
+    .node-bg { fill: #1E293B; stroke: #334155; stroke-width: 2px; rx: 12px; }
+    .root-bg { fill: #FF5500; stroke: #FF5E00; stroke-width: 2px; rx: 12px; }
+    .conn { stroke-width: 3.5px; fill: none; }
+  </style>
+  <rect x="${minX}" y="${minY}" width="${width}" height="${height}" fill="#0F172A"/>
+  <g>${connectionsLayer.innerHTML}</g>
+  <g>
+    ${nodes.map(n => {
+        const w = n.width || 180;
+        const h = n.height || 60;
+        const isRoot = n.id === 'node-root';
+        const cleanText = n.text.replace(/<[^>]*>?/gm, '');
+        return `<g transform="translate(${n.x}, ${n.y})">
+          <rect width="${w}" height="${h}" class="${isRoot ? 'root-bg' : 'node-bg'}" style="stroke: ${n.color || '#334155'};"/>
+          <text x="16" y="35" class="map-node" font-size="${n.fontSize || 14}px">${cleanText}</text>
+        </g>`;
+    }).join('')}
+  </g>
+</svg>`;
+
                     const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
                     downloadBlob(blob, `${currentTitle}.svg`);
                     showToast('Download SVG concluído!');
@@ -646,11 +680,13 @@ function initDownloadMenu() {
                     }
                     showToast('A gerar documento...');
                     
+                    // Renderiza o container dos nós com fundo consistente
                     const canvas = await html2canvas(nodesLayer, { 
                         backgroundColor: '#0f172a', 
                         scale: 2, 
                         logging: false,
-                        useCORS: true
+                        useCORS: true,
+                        allowTaint: true
                     });
                     
                     if (format === 'png') {

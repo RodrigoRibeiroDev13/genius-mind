@@ -19,6 +19,7 @@ let nodes = [
     { id: 'node-root', text: 'Meu Mapa Estratégico', x: 5000, y: 5000, parent: null, color: '#FF5E00', width: 180, height: 60, fontSize: 14 }
 ];
 let selectedNodeId = null;
+let currentLoadedMapId = null; // Armazena o ID do mapa atual se já estiver salvo
 let scale = 1;
 let panX = 0;
 let panY = 0;
@@ -404,6 +405,7 @@ function initToolbarActions() {
             nodes = [{ id: 'node-root', text: 'Meu Mapa Estratégico', x: 5000, y: 5000, parent: null, color: '#FF5E00', width: 180, height: 60, fontSize: 14 }];
             if (mapTitleInput) mapTitleInput.value = 'Meu Mapa Estratégico';
             if (mapTitleTopInput) mapTitleTopInput.value = 'Meu Mapa Estratégico';
+            currentLoadedMapId = null;
             selectedNodeId = null;
             centerOnNode('node-root');
             render();
@@ -425,6 +427,7 @@ function initToolbarActions() {
         showToast('Mapa auto-organizado!');
     };
 
+    // Botão Salvar com verificação de nome duplicado e sobrescrita
     document.getElementById('btnSave').onclick = async () => {
         const user = auth.currentUser;
         if (!user) {
@@ -433,14 +436,41 @@ function initToolbarActions() {
             return;
         }
         try {
-            const mapId = 'map_' + Date.now();
-            const currentTitle = mapTitleInput ? mapTitleInput.value : 'Meu Mapa Estratégico';
-            await db.collection('maps').doc(mapId).set({
+            const currentTitle = (mapTitleInput ? mapTitleInput.value : 'Meu Mapa Estratégico').trim();
+            
+            // Verificar se já existe um mapa com este mesmo nome para este utilizador
+            const querySnapshot = await db.collection('maps')
+                .where('owner', '==', user.uid)
+                .where('title', '==', currentTitle)
+                .get();
+
+            let targetMapId = currentLoadedMapId;
+
+            if (!querySnapshot.empty) {
+                const existingDoc = querySnapshot.docs[0];
+                // Se o mapa encontrado for diferente do que está aberto atualmente
+                if (!targetMapId || targetMapId !== existingDoc.id) {
+                    const desejaSobrescrever = confirm(`Já existe um mapa com o nome "${currentTitle}". Deseja sobrescrever/atualizar o mapa existente?`);
+                    if (!desejaSobrescrever) {
+                        showToast('Salvamento cancelado.');
+                        return;
+                    }
+                    targetMapId = existingDoc.id;
+                }
+            }
+
+            if (!targetMapId) {
+                targetMapId = 'map_' + Date.now();
+            }
+
+            await db.collection('maps').doc(targetMapId).set({
                 title: currentTitle,
                 nodes: nodes,
                 owner: user.uid,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
+
+            currentLoadedMapId = targetMapId;
             showToast('Mapa salvo com sucesso!');
         } catch (err) {
             showToast('Erro ao salvar: ' + err.message);
@@ -448,13 +478,14 @@ function initToolbarActions() {
     };
 
     document.getElementById('btnShare').onclick = async () => {
-        const mapId = 'map_' + Date.now();
+        const mapId = currentLoadedMapId || ('map_' + Date.now());
         const currentTitle = mapTitleInput ? mapTitleInput.value : 'Meu Mapa Estratégico';
         await db.collection('maps').doc(mapId).set({
             title: currentTitle,
             nodes: nodes,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
+        currentLoadedMapId = mapId;
         const shareUrl = `${window.location.origin}${window.location.pathname}?map=${mapId}`;
         document.getElementById('shareLinkInput').value = shareUrl;
         document.getElementById('shareModal').classList.remove('hidden');
@@ -504,6 +535,7 @@ function initMyMapsModal() {
                 titleSpan.style.cssText = 'color: #fff; font-weight: 600; cursor: pointer; flex: 1;';
                 titleSpan.onclick = () => {
                     nodes = data.nodes || nodes;
+                    currentLoadedMapId = mapId;
                     if (mapTitleInput) mapTitleInput.value = data.title || 'Meu Mapa';
                     if (mapTitleTopInput) mapTitleTopInput.value = data.title || 'Meu Mapa';
                     centerOnNode('node-root');
@@ -548,6 +580,7 @@ function initMyMapsModal() {
                     if (confirm(`Deseja excluir o mapa "${data.title || 'Sem título'}"?`)) {
                         try {
                             await db.collection('maps').doc(mapId).delete();
+                            if (currentLoadedMapId === mapId) currentLoadedMapId = null;
                             showToast('Mapa excluído com sucesso!');
                             btn.click();
                         } catch (err) {
@@ -581,6 +614,7 @@ async function loadMapFromURL() {
             if (doc.exists) {
                 const data = doc.data();
                 nodes = data.nodes || nodes;
+                currentLoadedMapId = mapId;
                 if (mapTitleInput) mapTitleInput.value = data.title || 'Mapa Partilhado';
                 if (mapTitleTopInput) mapTitleTopInput.value = data.title || 'Mapa Partilhado';
                 centerOnNode('node-root');
@@ -593,7 +627,7 @@ async function loadMapFromURL() {
     }
 }
 
-// Menus de Download Robustos e Corrigidos
+// Menus de Download
 function initDownloadMenu() {
     document.querySelectorAll('#downloadMenu button').forEach(btn => {
         btn.onclick = async () => {
@@ -601,41 +635,41 @@ function initDownloadMenu() {
             const currentTitle = (mapTitleInput ? mapTitleInput.value : 'Mapa').replace(/[^a-zA-Z0-9_-]/g, '_');
             
             try {
-                if (format === 'json') {
-                    const dataStr = JSON.stringify({ title: mapTitleInput ? mapTitleInput.value : 'Mapa', nodes }, null, 2);
-                    const blob = new Blob([dataStr], { type: 'application/json' });
-                    downloadBlob(blob, `${currentTitle}.json`);
-                    showToast('Download JSON concluído!');
-                } else if (format === 'md') {
-                    const md = nodes.map(n => `- ${n.text.replace(/<[^>]*>?/gm, '')}`).join('\n');
-                    const blob = new Blob([md], { type: 'text/markdown' });
-                    downloadBlob(blob, `${currentTitle}.md`);
-                    showToast('Download Markdown concluído!');
-                } else if (format === 'svg') {
+                if (format === 'svg') {
                     const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="10000" height="10000">${connectionsLayer.innerHTML}${nodesLayer.innerHTML}</svg>`;
-                    const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+                    const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
                     downloadBlob(blob, `${currentTitle}.svg`);
                     showToast('Download SVG concluído!');
                 } else if (format === 'png' || format === 'pdf') {
                     if (typeof html2canvas === 'undefined') {
                         throw new Error('Biblioteca html2canvas não carregada.');
                     }
-                    showToast('A gerar imagem/PDF do mapa...');
-                    const canvas = await html2canvas(nodesLayer, { backgroundColor: '#0f172a', scale: 2, logging: false });
+                    showToast('A gerar documento...');
+                    
+                    const canvas = await html2canvas(nodesLayer, { 
+                        backgroundColor: '#0f172a', 
+                        scale: 2, 
+                        logging: false,
+                        useCORS: true
+                    });
                     
                     if (format === 'png') {
-                        const link = document.createElement('a');
-                        link.download = `${currentTitle}.png`;
-                        link.href = canvas.toDataURL('image/png');
-                        link.click();
+                        const dataUrl = canvas.toDataURL('image/png');
+                        const blob = dataURItoBlob(dataUrl);
+                        downloadBlob(blob, `${currentTitle}.png`);
                         showToast('Download PNG concluído!');
                     } else {
                         if (typeof window.jspdf === 'undefined') {
                             throw new Error('Biblioteca jsPDF não carregada.');
                         }
                         const { jsPDF } = window.jspdf;
-                        const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? 'landscape' : 'portrait', unit: 'px', format: [canvas.width, canvas.height] });
-                        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
+                        const imgData = canvas.toDataURL('image/png');
+                        const pdf = new jsPDF({ 
+                            orientation: canvas.width > canvas.height ? 'landscape' : 'portrait', 
+                            unit: 'px', 
+                            format: [canvas.width, canvas.height] 
+                        });
+                        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
                         pdf.save(`${currentTitle}.pdf`);
                         showToast('Download PDF concluído!');
                     }
@@ -647,8 +681,12 @@ function initDownloadMenu() {
                     const doc = new Document({
                         sections: [{
                             children: [
-                                new Paragraph({ children: [new TextRun({ text: mapTitleInput ? mapTitleInput.value : 'Mapa', bold: true, size: 32 })] }),
-                                ...nodes.map(n => new Paragraph({ children: [new TextRun({ text: `• ${n.text.replace(/<[^>]*>?/gm, '')}`, size: 24 })] }))
+                                new Paragraph({ 
+                                    children: [new TextRun({ text: mapTitleInput ? mapTitleInput.value : 'Mapa', bold: true, size: 32 })] 
+                                }),
+                                ...nodes.map(n => new Paragraph({ 
+                                    children: [new TextRun({ text: `• ${n.text.replace(/<[^>]*>?/gm, '')}`, size: 24 })] 
+                                }))
                             ]
                         }]
                     });
@@ -662,6 +700,17 @@ function initDownloadMenu() {
             }
         };
     });
+}
+
+function dataURItoBlob(dataURI) {
+    const byteString = atob(dataURI.split(',')[1]);
+    const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ab], { type: mimeString });
 }
 
 function downloadBlob(blob, filename) {

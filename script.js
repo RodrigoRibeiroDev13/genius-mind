@@ -79,33 +79,8 @@ function render() {
     nodesLayer.innerHTML = '';
     connectionsLayer.innerHTML = '';
 
-    nodes.forEach(node => {
-        if (node.parent) {
-            const parent = nodes.find(n => n.id === node.parent);
-            if (parent) {
-                const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                
-                const pW = parent.width || 180;
-                const pH = parent.height || 60;
-                const nW = node.width || 180;
-                const nH = node.height || 60;
-
-                const x1 = parent.x + (pW / 2);
-                const y1 = parent.y + (pH / 2);
-                const x2 = node.x + (nW / 2);
-                const y2 = node.y + (nH / 2);
-
-                const curve = `M ${x1} ${y1} C ${x1 + 60} ${y1}, ${x2 - 60} ${y2}, ${x2} ${y2}`;
-                
-                line.setAttribute('d', curve);
-                line.setAttribute('stroke', node.color || '#334155');
-                line.setAttribute('stroke-width', '3.5');
-                line.setAttribute('fill', 'none');
-                connectionsLayer.appendChild(line);
-            }
-        }
-    });
-
+    // 1. Cria os elementos dos nós primeiro para medir a altura real de cada um
+    const nodeElements = {};
     nodes.forEach(node => {
         const el = document.createElement('div');
         el.className = `map-node ${node.id === selectedNodeId ? 'selected' : ''}`;
@@ -146,6 +121,50 @@ function render() {
         });
 
         nodesLayer.appendChild(el);
+        nodeElements[node.id] = el;
+    });
+
+    // 2. Desenha as conexões usando a altura real renderizada
+    nodes.forEach(node => {
+        if (node.parent) {
+            const parent = nodes.find(n => n.id === node.parent);
+            if (parent) {
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                
+                const pEl = nodeElements[parent.id];
+                const nEl = nodeElements[node.id];
+
+                const pW = pEl ? pEl.offsetWidth : (parent.width || 180);
+                const pH = pEl ? pEl.offsetHeight : (parent.height || 60);
+                const nW = nEl ? nEl.offsetWidth : (node.width || 180);
+                const nH = nEl ? nEl.offsetHeight : (node.height || 60);
+
+                // Atualiza altura real no objeto para uso nas exportações
+                parent.realHeight = pH;
+                parent.realWidth = pW;
+                node.realHeight = nH;
+                node.realWidth = nW;
+
+                const x1 = parent.x + (pW / 2);
+                const y1 = parent.y + (pH / 2);
+                const x2 = node.x + (nW / 2);
+                const y2 = node.y + (nH / 2);
+
+                const curve = `M ${x1} ${y1} C ${x1 + 60} ${y1}, ${x2 - 60} ${y2}, ${x2} ${y2}`;
+                
+                line.setAttribute('d', curve);
+                line.setAttribute('stroke', node.color || '#334155');
+                line.setAttribute('stroke-width', '3.5');
+                line.setAttribute('fill', 'none');
+                connectionsLayer.appendChild(line);
+            }
+        } else {
+            const rEl = nodeElements[node.id];
+            if (rEl) {
+                node.realHeight = rEl.offsetHeight;
+                node.realWidth = rEl.offsetWidth;
+            }
+        }
     });
 
     updateNodeToolbar();
@@ -624,111 +643,211 @@ async function loadMapFromURL() {
     }
 }
 
-// Menus de Download Corrigidos e Otimizados
+// =========================================================================
+// SISTEMA DE EXPORTAÇÃO CORRIGIDO (SVG COM FOREIGNOBJECT, PNG, PDF E WORD)
+// =========================================================================
+
+// Gera um SVG vetorial completo com quebra de linha real, altura dinâmica e conexões
+function buildMapSVGData() {
+    render(); // Garante que realWidth e realHeight estão atualizados
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    nodes.forEach(n => {
+        const w = n.realWidth || n.width || 180;
+        const h = n.realHeight || n.height || 60;
+        if (n.x < minX) minX = n.x;
+        if (n.y < minY) minY = n.y;
+        if (n.x + w > maxX) maxX = n.x + w;
+        if (n.y + h > maxY) maxY = n.y + h;
+    });
+
+    if (!isFinite(minX)) {
+        minX = 4900; minY = 4900; maxX = 5300; maxY = 5200;
+    }
+
+    const padding = 60;
+    minX -= padding;
+    minY -= padding;
+    maxX += padding;
+    maxY += padding;
+
+    const width = Math.ceil(maxX - minX);
+    const height = Math.ceil(maxY - minY);
+
+    // Monta cada nó usando foreignObject para preservar quebra de linha, negrito, itálico e tamanho exato
+    const nodesMarkup = nodes.map(n => {
+        const w = n.realWidth || n.width || 180;
+        const h = n.realHeight || n.height || 60;
+        const isRoot = n.id === 'node-root';
+        const bg = isRoot ? 'linear-gradient(135deg, #FF8C00, #FF5500)' : '#1E293B';
+        const borderColor = n.color || '#334155';
+        const fontSize = n.fontSize || 14;
+
+        // Converte quebras e garante fechamento XHTML válido dentro do foreignObject
+        const safeHTML = n.text
+            .replace(/<br\s*\/?>/gi, '<br/>')
+            .replace(/&nbsp;/g, ' ');
+
+        return `
+        <foreignObject x="${n.x}" y="${n.y}" width="${w}" height="${h + 10}">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="
+                box-sizing: border-box;
+                width: ${w}px;
+                min-height: ${h}px;
+                padding: 14px 16px;
+                background: ${bg};
+                border: 2px solid ${borderColor};
+                border-radius: 12px;
+                color: #FFFFFF;
+                font-family: Arial, Helvetica, sans-serif;
+                font-size: ${fontSize}px;
+                font-weight: 600;
+                line-height: 1.35;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+            ">${safeHTML}</div>
+        </foreignObject>`;
+    }).join('');
+
+    const svgString = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="${minX} ${minY} ${width} ${height}" width="${width}" height="${height}">
+    <rect x="${minX}" y="${minY}" width="${width}" height="${height}" fill="#0F172A"/>
+    <g>${connectionsLayer.innerHTML}</g>
+    <g>${nodesMarkup}</g>
+</svg>`;
+
+    return { svgString, width, height };
+}
+
+// Converte o SVG gerado diretamente para um Canvas HTML5 nítido (sem limite de 10000px)
+function renderSVGToCanvas(svgString, width, height) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        // Usa encodeURIComponent para evitar qualquer erro de caracteres UTF-8/acentos
+        const svgUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+
+        img.onload = () => {
+            // Limita o fator de escala para nunca ultrapassar 4096px e evitar corrupção de memória
+            const maxDim = Math.max(width, height);
+            const pixelRatio = maxDim > 2000 ? 1 : 2;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width * pixelRatio;
+            canvas.height = height * pixelRatio;
+
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#0F172A';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.scale(pixelRatio, pixelRatio);
+            ctx.drawImage(img, 0, 0, width, height);
+
+            resolve(canvas);
+        };
+
+        img.onerror = (err) => {
+            reject(new Error('Falha ao converter o mapa para imagem.'));
+        };
+
+        img.src = svgUrl;
+    });
+}
+
+// Gera estrutura hierárquica limpa em HTML compatível com Microsoft Word (.doc/.docx)
+function buildWordDocumentHTML(title) {
+    function renderTree(parentId, level) {
+        const children = nodes.filter(n => n.parent === parentId);
+        if (children.length === 0) return '';
+
+        const tag = level === 0 ? 'ul' : 'ul';
+        const items = children.map(child => {
+            const cleanText = child.text.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>?/gm, '').trim();
+            return `<li style="margin-bottom: 6pt; font-size: ${level === 0 ? '13pt' : '11pt'};">
+                <strong>${cleanText}</strong>
+                ${renderTree(child.id, level + 1)}
+            </li>`;
+        }).join('');
+
+        return `<${tag} style="margin-top: 4pt; margin-bottom: 8pt;">${items}</${tag}>`;
+    }
+
+    const root = nodes.find(n => !n.parent);
+    const rootTitle = root ? root.text.replace(/<[^>]*>?/gm, '').trim() : title;
+
+    return `
+    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head>
+        <meta charset="utf-8">
+        <title>${title}</title>
+        <style>
+            body { font-family: 'Calibri', 'Arial', sans-serif; color: #1E293B; line-height: 1.5; }
+            h1 { color: #FF5E00; font-size: 20pt; border-bottom: 2px solid #FF5E00; padding-bottom: 6pt; }
+            h2 { color: #0F172A; font-size: 15pt; margin-top: 14pt; }
+        </style>
+    </head>
+    <body>
+        <h1>${title}</h1>
+        <h2>Tópico Central: ${rootTitle}</h2>
+        ${root ? renderTree(root.id, 0) : ''}
+    </body>
+    </html>`;
+}
+
 function initDownloadMenu() {
     document.querySelectorAll('#downloadMenu button').forEach(btn => {
         btn.onclick = async () => {
             const format = btn.getAttribute('data-format');
-            const currentTitle = (mapTitleInput ? mapTitleInput.value : 'Mapa').replace(/[^a-zA-Z0-9_-]/g, '_');
+            const rawTitle = mapTitleInput ? mapTitleInput.value.trim() : 'Mapa';
+            const currentTitle = rawTitle.replace(/[^a-zA-Z0-9À-ÿ_-]/g, '_') || 'Mapa_Mental';
             
             try {
                 if (format === 'svg') {
-                    // SVG Completo e bem estruturado contendo as linhas e nós estilizados
-                    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-                    nodes.forEach(n => {
-                        const w = n.width || 180;
-                        const h = n.height || 60;
-                        if (n.x < minX) minX = n.x;
-                        if (n.y < minY) minY = n.y;
-                        if (n.x + w > maxX) maxX = n.x + w;
-                        if (n.y + h > maxY) maxY = n.y + h;
-                    });
-                    minX -= 60; minY -= 60; maxX += 60; maxY += 60;
-                    const width = maxX - minX;
-                    const height = maxY - minY;
-
-                    const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="${minX} ${minY} ${width} ${height}" width="${width}" height="${height}">
-  <style>
-    .map-node { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 600; fill: #FFFFFF; }
-    .node-bg { fill: #1E293B; stroke: #334155; stroke-width: 2px; rx: 12px; }
-    .root-bg { fill: #FF5500; stroke: #FF5E00; stroke-width: 2px; rx: 12px; }
-    .conn { stroke-width: 3.5px; fill: none; }
-  </style>
-  <rect x="${minX}" y="${minY}" width="${width}" height="${height}" fill="#0F172A"/>
-  <g>${connectionsLayer.innerHTML}</g>
-  <g>
-    ${nodes.map(n => {
-        const w = n.width || 180;
-        const h = n.height || 60;
-        const isRoot = n.id === 'node-root';
-        const cleanText = n.text.replace(/<[^>]*>?/gm, '');
-        return `<g transform="translate(${n.x}, ${n.y})">
-          <rect width="${w}" height="${h}" class="${isRoot ? 'root-bg' : 'node-bg'}" style="stroke: ${n.color || '#334155'};"/>
-          <text x="16" y="35" class="map-node" font-size="${n.fontSize || 14}px">${cleanText}</text>
-        </g>`;
-    }).join('')}
-  </g>
-</svg>`;
-
-                    const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+                    const { svgString } = buildMapSVGData();
+                    const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
                     downloadBlob(blob, `${currentTitle}.svg`);
                     showToast('Download SVG concluído!');
-                } else if (format === 'png' || format === 'pdf') {
-                    if (typeof html2canvas === 'undefined') {
-                        throw new Error('Biblioteca html2canvas não carregada.');
-                    }
-                    showToast('A gerar documento...');
+
+                } else if (format === 'png') {
+                    showToast('A gerar imagem PNG...');
+                    const { svgString, width, height } = buildMapSVGData();
+                    const canvas = await renderSVGToCanvas(svgString, width, height);
                     
-                    // Renderiza o container dos nós com fundo consistente
-                    const canvas = await html2canvas(nodesLayer, { 
-                        backgroundColor: '#0f172a', 
-                        scale: 2, 
-                        logging: false,
-                        useCORS: true,
-                        allowTaint: true
-                    });
-                    
-                    if (format === 'png') {
-                        const dataUrl = canvas.toDataURL('image/png');
-                        const blob = dataURItoBlob(dataUrl);
+                    canvas.toBlob((blob) => {
+                        if (!blob) {
+                            showToast('Erro ao gerar o ficheiro PNG.');
+                            return;
+                        }
                         downloadBlob(blob, `${currentTitle}.png`);
                         showToast('Download PNG concluído!');
-                    } else {
-                        if (typeof window.jspdf === 'undefined') {
-                            throw new Error('Biblioteca jsPDF não carregada.');
-                        }
-                        const { jsPDF } = window.jspdf;
-                        const imgData = canvas.toDataURL('image/png');
-                        const pdf = new jsPDF({ 
-                            orientation: canvas.width > canvas.height ? 'landscape' : 'portrait', 
-                            unit: 'px', 
-                            format: [canvas.width, canvas.height] 
-                        });
-                        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-                        pdf.save(`${currentTitle}.pdf`);
-                        showToast('Download PDF concluído!');
+                    }, 'image/png');
+
+                } else if (format === 'pdf') {
+                    if (typeof window.jspdf === 'undefined') {
+                        throw new Error('Biblioteca jsPDF não carregada.');
                     }
-                } else if (format === 'docx') {
-                    if (typeof window.docx === 'undefined') {
-                        throw new Error('Biblioteca docx não carregada.');
-                    }
-                    const { Document, Packer, Paragraph, TextRun } = window.docx;
-                    const doc = new Document({
-                        sections: [{
-                            children: [
-                                new Paragraph({ 
-                                    children: [new TextRun({ text: mapTitleInput ? mapTitleInput.value : 'Mapa', bold: true, size: 32 })] 
-                                }),
-                                ...nodes.map(n => new Paragraph({ 
-                                    children: [new TextRun({ text: `• ${n.text.replace(/<[^>]*>?/gm, '')}`, size: 24 })] 
-                                }))
-                            ]
-                        }]
+                    showToast('A gerar documento PDF...');
+                    const { svgString, width, height } = buildMapSVGData();
+                    const canvas = await renderSVGToCanvas(svgString, width, height);
+                    const imgData = canvas.toDataURL('image/png');
+
+                    const { jsPDF } = window.jspdf;
+                    const orientation = width >= height ? 'landscape' : 'portrait';
+                    const pdf = new jsPDF({
+                        orientation: orientation,
+                        unit: 'px',
+                        format: [width, height]
                     });
-                    const blob = await Packer.toBlob(doc);
-                    downloadBlob(blob, `${currentTitle}.docx`);
-                    showToast('Download Word (.docx) concluído!');
+                    pdf.addImage(imgData, 'PNG', 0, 0, width, height);
+                    pdf.save(`${currentTitle}.pdf`);
+                    showToast('Download PDF concluído!');
+
+                } else if (format === 'docx') {
+                    showToast('A gerar documento Word...');
+                    const docHTML = buildWordDocumentHTML(rawTitle);
+                    const blob = new Blob(['\ufeff', docHTML], {
+                        type: 'application/msword;charset=utf-8'
+                    });
+                    downloadBlob(blob, `${currentTitle}.doc`);
+                    showToast('Download Word concluído!');
                 }
             } catch (err) {
                 console.error(err);
@@ -738,17 +857,6 @@ function initDownloadMenu() {
     });
 }
 
-function dataURItoBlob(dataURI) {
-    const byteString = atob(dataURI.split(',')[1]);
-    const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
-    const ab = new ArrayBuffer(byteString.length);
-    const ia = new Uint8Array(ab);
-    for (let i = 0; i < byteString.length; i++) {
-        ia[i] = byteString.charCodeAt(i);
-    }
-    return new Blob([ab], { type: mimeString });
-}
-
 function downloadBlob(blob, filename) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -756,8 +864,10 @@ function downloadBlob(blob, filename) {
     a.download = filename;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, 150);
 }
 
 function initAIAndFiles() {

@@ -46,7 +46,6 @@
       </div>
       <div class="brand-text">
         <span class="brand-title">Genius <span class="highlight">Mind</span></span>
-        <input type="text" id="mapTitle" value="Meu Mapa Estratégico" title="Clique para renomear o mapa" />
       </div>
     </div>
 
@@ -82,13 +81,27 @@
     </div>
   </header>
 
-  <section class="ai-prompt-bar">
-    <div class="ai-badge">✨ Genius IA</div>
-    <input type="text" id="aiPromptInput" placeholder="Digite um tema, ideia ou cole um resumo para gerar o mapa mental..." />
-    <button class="btn btn-primary" id="btnGenerateAI">Gerar Mapa</button>
+  <!-- Área de Prompt IA e Controlos Abaixo -->
+  <section class="ai-prompt-container">
+    <div class="ai-prompt-bar">
+      <div class="ai-badge">✨ Genius IA</div>
+      <input type="text" id="aiPromptInput" placeholder="Digite um tema, ideia ou cole um resumo para gerar o mapa mental..." />
+      <button class="btn btn-primary" id="btnGenerateAI">Gerar Mapa</button>
+    </div>
+    
+    <!-- Painel de Renomear e Aviso de IA -->
+    <div class="map-sub-controls">
+      <div class="rename-inline-group">
+        <label for="mapTitle">Renomear Mapa:</label>
+        <input type="text" id="mapTitle" value="Meu Mapa Estratégico" title="Digite para renomear o mapa atual" />
+      </div>
+      <div class="ai-notice-text">
+        ⚠️ <strong>Em breve!</strong> Enquanto isso você deve utilizar: <span>Claude, ChatGPT ou Gemini</span>
+      </div>
+    </div>
   </section>
 
-  <!-- Barra Contextual -->
+  <!-- Barra Contextual de Nó -->
   <div class="node-toolbar hidden" id="nodeToolbar">
     <button class="tool-btn" id="btnEditNodeText" title="Editar texto do nó">✏️ Editar</button>
     <button class="tool-btn" id="btnAddChild" title="Adicionar sub-tópico">+ Filho</button>
@@ -112,7 +125,6 @@
     </div>
   </main>
 
-  <!-- Input Flutuante de Edição Rápida (Sempre pronto e oculto por padrão) -->
   <input type="text" id="inlineEditInput" class="hidden" placeholder="Novo texto..." />
 
   <footer class="bottom-controls">
@@ -130,7 +142,7 @@
 
   <!-- Modais -->
   <div class="modal-backdrop hidden" id="myMapsModal">
-    <div class="modal-card" style="max-width: 550px;">
+    <div class="modal-card" style="max-width: 580px;">
       <div class="modal-header">
         <h3>📂 Meus Mapas Mentais Salvos</h3>
         <button class="close-modal" id="closeMyMapsModal">✕</button>
@@ -173,11 +185,6 @@
       </div>
     </div>
   </div>
-
-  <div class="toast hidden" id="toast"></div>
-  <script src="script.js"></script>
-</body>
-</html>
 
   <div class="toast hidden" id="toast"></div>
   <script src="script.js"></script>

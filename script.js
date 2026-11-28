@@ -1,4 +1,4 @@
-// Configuração do Firebase (Compat Mode)
+// Configuração do Firebase (Compatible Mode)
 const firebaseConfig = {
   apiKey: "AIzaSyAkgtZz9P_QDFqX2opRgmjTGCto7_8nW8g",
   authDomain: "genius-mind-40d98.firebaseapp.com",

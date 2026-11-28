@@ -29,7 +29,7 @@ let draggingNodeId = null;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 
-let nodesLayer, connectionsLayer, canvasStage, canvasWrapper, zoomLabel, nodeToolbar, mapTitleInput, mapTitleTopInput, toastEl, advancedEditModal, modalEditableArea, fontSizeIndicator;
+let nodesLayer, connectionsLayer, canvasStage, canvasWrapper, zoomLabel, nodeToolbar, mapTitleInput, mapTitleTopInput, toastEl, advancedEditModal, modalEditableArea, fontValDisplay, boxValDisplay, livePreviewBox;
 
 window.onload = () => {
     nodesLayer = document.getElementById('nodesLayer');
@@ -43,7 +43,9 @@ window.onload = () => {
     toastEl = document.getElementById('toast');
     advancedEditModal = document.getElementById('advancedEditModal');
     modalEditableArea = document.getElementById('modalEditableArea');
-    fontSizeIndicator = document.getElementById('fontSizeIndicator');
+    fontValDisplay = document.getElementById('fontValDisplay');
+    boxValDisplay = document.getElementById('boxValDisplay');
+    livePreviewBox = document.getElementById('livePreviewBox');
 
     if (mapTitleInput && mapTitleTopInput) {
         mapTitleInput.oninput = (e) => { mapTitleTopInput.value = e.target.value; };
@@ -70,7 +72,7 @@ function showToast(msg) {
     setTimeout(() => toastEl.classList.add('hidden'), 3000);
 }
 
-// Renderização Geral
+// Renderização Geral do Mapa
 function render() {
     if (!nodesLayer || !connectionsLayer) return;
     nodesLayer.innerHTML = '';
@@ -148,18 +150,35 @@ function render() {
     updateNodeToolbar();
 }
 
-// Editor Avançado com Pré-visualização ao vivo
+// Editor Avançado com Preview ao Vivo
+let tempFontSize = 14;
+let tempBoxWidth = 180;
+
 function abrirEditorAvancado(nodeId) {
     const node = nodes.find(n => n.id === nodeId);
     if (!node || !advancedEditModal) return;
 
     selectedNodeId = nodeId;
     modalEditableArea.innerHTML = node.text;
-    modalEditableArea.style.fontSize = `${node.fontSize || 14}px`;
-    if (fontSizeIndicator) fontSizeIndicator.textContent = `Tamanho da fonte: ${node.fontSize || 14}px`;
+    tempFontSize = node.fontSize || 14;
+    tempBoxWidth = node.width || 180;
 
+    updateEditorUI();
     advancedEditModal.classList.remove('hidden');
     modalEditableArea.focus();
+}
+
+function updateEditorUI() {
+    if (fontValDisplay) fontValDisplay.textContent = `${tempFontSize}px`;
+    if (boxValDisplay) boxValDisplay.textContent = `${tempBoxWidth}px`;
+
+    if (modalEditableArea) modalEditableArea.style.fontSize = `${tempFontSize}px`;
+
+    if (livePreviewBox) {
+        livePreviewBox.innerHTML = modalEditableArea.innerHTML || 'Pré-visualização';
+        livePreviewBox.style.fontSize = `${tempFontSize}px`;
+        livePreviewBox.style.width = `${Math.min(tempBoxWidth, 400)}px`;
+    }
 }
 
 function initAdvancedEditor() {
@@ -170,47 +189,31 @@ function initAdvancedEditor() {
                 e.preventDefault();
                 document.execCommand(cmd, false, null);
                 modalEditableArea.focus();
+                updateEditorUI();
             };
         }
     });
 
-    // Aumentar/Diminuir Letra diretamente com pré-visualização instantânea na caixinha
+    modalEditableArea.oninput = () => {
+        updateEditorUI();
+    };
+
     document.getElementById('btnFontPlus').onclick = () => {
-        const node = nodes.find(n => n.id === selectedNodeId);
-        if (node) {
-            node.fontSize = (node.fontSize || 14) + 2;
-            modalEditableArea.style.fontSize = `${node.fontSize}px`;
-            if (fontSizeIndicator) fontSizeIndicator.textContent = `Tamanho da fonte: ${node.fontSize}px`;
-        }
+        tempFontSize = Math.min(36, tempFontSize + 2);
+        updateEditorUI();
     };
-
     document.getElementById('btnFontMinus').onclick = () => {
-        const node = nodes.find(n => n.id === selectedNodeId);
-        if (node) {
-            node.fontSize = Math.max(10, (node.fontSize || 14) - 2);
-            modalEditableArea.style.fontSize = `${node.fontSize}px`;
-            if (fontSizeIndicator) fontSizeIndicator.textContent = `Tamanho da fonte: ${node.fontSize}px`;
-        }
+        tempFontSize = Math.max(10, tempFontSize - 2);
+        updateEditorUI();
     };
 
-    document.getElementById('btnBoxLarger').onclick = () => {
-        const node = nodes.find(n => n.id === selectedNodeId);
-        if (node) {
-            node.width = (node.width || 180) + 40;
-            node.height = (node.height || 60) + 15;
-            render();
-            showToast('Caixa expandida!');
-        }
+    document.getElementById('btnBoxPlus').onclick = () => {
+        tempBoxWidth = Math.min(500, tempBoxWidth + 20);
+        updateEditorUI();
     };
-
-    document.getElementById('btnBoxSmaller').onclick = () => {
-        const node = nodes.find(n => n.id === selectedNodeId);
-        if (node) {
-            node.width = Math.max(120, (node.width || 180) - 40);
-            node.height = Math.max(45, (node.height || 60) - 15);
-            render();
-            showToast('Caixa reduzida!');
-        }
+    document.getElementById('btnBoxMinus').onclick = () => {
+        tempBoxWidth = Math.max(120, tempBoxWidth - 20);
+        updateEditorUI();
     };
 
     document.getElementById('btnSaveEdit').onclick = () => {
@@ -218,6 +221,8 @@ function initAdvancedEditor() {
         const node = nodes.find(n => n.id === selectedNodeId);
         if (node) {
             node.text = modalEditableArea.innerHTML.trim() || 'Sem título';
+            node.fontSize = tempFontSize;
+            node.width = tempBoxWidth;
             render();
             showToast('Tópico atualizado com sucesso!');
         }
@@ -588,55 +593,72 @@ async function loadMapFromURL() {
     }
 }
 
-// Menus de Download
+// Menus de Download Robustos e Corrigidos
 function initDownloadMenu() {
     document.querySelectorAll('#downloadMenu button').forEach(btn => {
         btn.onclick = async () => {
             const format = btn.getAttribute('data-format');
-            const currentTitle = mapTitleInput ? mapTitleInput.value : 'Mapa';
-            if (format === 'json') {
-                const blob = new Blob([JSON.stringify({ title: currentTitle, nodes }, null, 2)], { type: 'application/json' });
-                downloadBlob(blob, `${currentTitle}.json`);
-                showToast('Download JSON concluído!');
-            } else if (format === 'md') {
-                const md = nodes.map(n => `- ${n.text}`).join('\n');
-                const blob = new Blob([md], { type: 'text/markdown' });
-                downloadBlob(blob, `${currentTitle}.md`);
-                showToast('Download Markdown concluído!');
-            } else if (format === 'svg') {
-                const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="10000" height="10000">${connectionsLayer.innerHTML}${nodesLayer.innerHTML}</svg>`;
-                const blob = new Blob([svgContent], { type: 'image/svg+xml' });
-                downloadBlob(blob, `${currentTitle}.svg`);
-                showToast('Download SVG concluído!');
-            } else if (format === 'png' || format === 'pdf') {
-                showToast('A gerar documento...');
-                const canvas = await html2canvas(nodesLayer, { backgroundColor: '#0f172a', scale: 2 });
-                if (format === 'png') {
-                    const link = document.createElement('a');
-                    link.download = `${currentTitle}.png`;
-                    link.href = canvas.toDataURL();
-                    link.click();
-                    showToast('Download PNG concluído!');
-                } else {
-                    const { jsPDF } = window.jspdf;
-                    const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? 'landscape' : 'portrait', unit: 'px', format: [canvas.width, canvas.height] });
-                    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
-                    pdf.save(`${currentTitle}.pdf`);
-                    showToast('Download PDF concluído!');
+            const currentTitle = (mapTitleInput ? mapTitleInput.value : 'Mapa').replace(/[^a-zA-Z0-9_-]/g, '_');
+            
+            try {
+                if (format === 'json') {
+                    const dataStr = JSON.stringify({ title: mapTitleInput ? mapTitleInput.value : 'Mapa', nodes }, null, 2);
+                    const blob = new Blob([dataStr], { type: 'application/json' });
+                    downloadBlob(blob, `${currentTitle}.json`);
+                    showToast('Download JSON concluído!');
+                } else if (format === 'md') {
+                    const md = nodes.map(n => `- ${n.text.replace(/<[^>]*>?/gm, '')}`).join('\n');
+                    const blob = new Blob([md], { type: 'text/markdown' });
+                    downloadBlob(blob, `${currentTitle}.md`);
+                    showToast('Download Markdown concluído!');
+                } else if (format === 'svg') {
+                    const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="10000" height="10000">${connectionsLayer.innerHTML}${nodesLayer.innerHTML}</svg>`;
+                    const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+                    downloadBlob(blob, `${currentTitle}.svg`);
+                    showToast('Download SVG concluído!');
+                } else if (format === 'png' || format === 'pdf') {
+                    if (typeof html2canvas === 'undefined') {
+                        throw new Error('Biblioteca html2canvas não carregada.');
+                    }
+                    showToast('A gerar imagem/PDF do mapa...');
+                    const canvas = await html2canvas(nodesLayer, { backgroundColor: '#0f172a', scale: 2, logging: false });
+                    
+                    if (format === 'png') {
+                        const link = document.createElement('a');
+                        link.download = `${currentTitle}.png`;
+                        link.href = canvas.toDataURL('image/png');
+                        link.click();
+                        showToast('Download PNG concluído!');
+                    } else {
+                        if (typeof window.jspdf === 'undefined') {
+                            throw new Error('Biblioteca jsPDF não carregada.');
+                        }
+                        const { jsPDF } = window.jspdf;
+                        const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? 'landscape' : 'portrait', unit: 'px', format: [canvas.width, canvas.height] });
+                        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
+                        pdf.save(`${currentTitle}.pdf`);
+                        showToast('Download PDF concluído!');
+                    }
+                } else if (format === 'docx') {
+                    if (typeof window.docx === 'undefined') {
+                        throw new Error('Biblioteca docx não carregada.');
+                    }
+                    const { Document, Packer, Paragraph, TextRun } = window.docx;
+                    const doc = new Document({
+                        sections: [{
+                            children: [
+                                new Paragraph({ children: [new TextRun({ text: mapTitleInput ? mapTitleInput.value : 'Mapa', bold: true, size: 32 })] }),
+                                ...nodes.map(n => new Paragraph({ children: [new TextRun({ text: `• ${n.text.replace(/<[^>]*>?/gm, '')}`, size: 24 })] }))
+                            ]
+                        }]
+                    });
+                    const blob = await Packer.toBlob(doc);
+                    downloadBlob(blob, `${currentTitle}.docx`);
+                    showToast('Download Word (.docx) concluído!');
                 }
-            } else if (format === 'docx') {
-                const { Document, Packer, Paragraph, TextRun } = window.docx;
-                const doc = new Document({
-                    sections: [{
-                        children: [
-                            new Paragraph({ children: [new TextRun({ text: currentTitle, bold: true, size: 32 })] }),
-                            ...nodes.map(n => new Paragraph({ children: [new TextRun({ text: `• ${n.text}`, size: 24 })] }))
-                        ]
-                    }]
-                });
-                const blob = await Packer.toBlob(doc);
-                downloadBlob(blob, `${currentTitle}.docx`);
-                showToast('Download Word (.docx) concluído!');
+            } catch (err) {
+                console.error(err);
+                showToast('Erro ao exportar: ' + err.message);
             }
         };
     });
@@ -647,7 +669,9 @@ function downloadBlob(blob, filename) {
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
 

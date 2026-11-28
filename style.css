@@ -107,10 +107,10 @@ body, html {
 .dropdown-menu button:hover { background: rgba(255,255,255,0.08); }
 .dropdown:hover .dropdown-menu { display: block; }
 
-/* Contentor do Prompt IA e controlos abaixo */
+/* Contentor do Prompt IA e controlos principais centralizados */
 .ai-prompt-container {
   position: fixed;
-  top: 74px;
+  top: 70px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -120,6 +120,21 @@ body, html {
   z-index: 90;
   width: 90%;
   max-width: 600px;
+}
+
+.ai-notice-text {
+  background: rgba(15, 23, 42, 0.9);
+  padding: 4px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--gm-border);
+  color: var(--gm-muted);
+  font-size: 0.78rem;
+  text-align: center;
+  width: 100%;
+}
+.ai-notice-text span {
+  color: var(--gm-orange-light);
+  font-weight: 600;
 }
 
 .ai-prompt-bar {
@@ -146,49 +161,80 @@ body, html {
 
 #aiPromptInput { flex: 1; background: transparent; border: none; color: #fff; outline: none; font-size: 0.85rem; }
 
-/* Sub-controlos abaixo da IA (Renomear e Aviso) */
-.map-sub-controls {
+/* Campo de Renomear Grande abaixo da IA */
+.rename-wide-group {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 10px;
+  background: var(--gm-card);
+  border: 1px solid var(--gm-border);
+  padding: 6px 16px;
+  border-radius: 20px;
   width: 100%;
-  padding: 0 4px;
-  font-size: 0.78rem;
-  color: var(--gm-muted);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
 }
 
-.rename-inline-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(30, 41, 59, 0.8);
-  padding: 3px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--gm-border);
+.rename-wide-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gm-muted);
+  white-space: nowrap;
 }
 
 #mapTitle {
+  flex: 1;
   background: transparent;
   border: none;
   color: #fff;
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 700;
   outline: none;
-  width: 140px;
+}
+#mapTitle:focus { background: rgba(255,255,255,0.05); border-radius: 4px; }
+
+/* Modal Avançado de Edição com redimensionamento livre */
+.edit-advanced-card {
+  max-width: 500px;
+  width: 90%;
 }
 
-.ai-notice-text {
-  background: rgba(15, 23, 42, 0.85);
-  padding: 3px 10px;
+.format-toolbar {
+  display: flex;
+  gap: 6px;
+  background: #0f172a;
+  padding: 6px;
   border-radius: 8px;
   border: 1px solid var(--gm-border);
-  color: var(--gm-muted);
+  margin-top: 12px;
+  margin-bottom: 12px;
 }
 
-.ai-notice-text span {
-  color: var(--gm-orange-light);
-  font-weight: 600;
+.fmt-btn {
+  background: transparent;
+  border: 1px solid var(--gm-border);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
 }
+.fmt-btn:hover { background: rgba(255,255,255,0.1); border-color: var(--gm-orange); }
+
+.editable-content-box {
+  width: 100%;
+  min-height: 120px;
+  max-height: 400px;
+  resize: both; /* Permite redimensionar a caixinha livremente pelo canto inferior direito */
+  overflow: auto;
+  background: #0f172a;
+  border: 1.5px solid var(--gm-border);
+  border-radius: 8px;
+  padding: 12px;
+  color: #fff;
+  font-size: 1rem;
+  outline: none;
+}
+.editable-content-box:focus { border-color: #38bdf8; }
 
 .node-toolbar {
   position: absolute;
@@ -255,7 +301,7 @@ body, html {
 .map-node {
   position: absolute;
   min-width: 160px;
-  max-width: 280px;
+  max-width: 320px;
   padding: 14px 16px;
   background: var(--gm-card);
   border: 2px solid var(--gm-border);
@@ -269,27 +315,12 @@ body, html {
   outline: none;
   pointer-events: auto;
   transition: border-color 0.2s, box-shadow 0.2s;
+  word-break: break-word;
 }
 
 .map-node:hover { border-color: var(--gm-orange); }
 .map-node.selected { border-color: var(--gm-orange); box-shadow: 0 0 0 3px rgba(255, 94, 0, 0.3); }
 .map-node.root-node { background: linear-gradient(135deg, #FF8C00, #FF5500); border-color: #FF5E00; }
-
-#inlineEditInput {
-  position: absolute;
-  z-index: 300;
-  min-width: 160px;
-  max-width: 280px;
-  padding: 12px 14px;
-  background: #0f172a;
-  border: 2px solid #38bdf8;
-  border-radius: 12px;
-  color: #fff;
-  font-size: 0.9rem;
-  font-weight: 600;
-  outline: none;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-}
 
 .bottom-controls {
   position: fixed;

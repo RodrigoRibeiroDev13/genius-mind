@@ -234,12 +234,21 @@ body, html {
 .map-node.selected { border-color: var(--gm-orange); box-shadow: 0 0 0 3px rgba(255, 94, 0, 0.3); }
 .map-node.root-node { background: linear-gradient(135deg, #FF8C00, #FF5500); border-color: #FF5E00; }
 
-.map-node[contenteditable="true"] {
-  background: #0f172a !important;
-  border-color: #38bdf8 !important;
-  cursor: text !important;
-  user-select: text !important;
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.3) !important;
+/* Input de edição rápida posicionado diretamente sobre o canvas */
+#inlineEditInput {
+  position: absolute;
+  z-index: 300;
+  min-width: 160px;
+  max-width: 280px;
+  padding: 12px 14px;
+  background: #0f172a;
+  border: 2px solid #38bdf8;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  outline: none;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
 }
 
 .bottom-controls {

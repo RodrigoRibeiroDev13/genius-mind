@@ -8,21 +8,20 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Bibliotecas Externas para Exportação e Leitura de Arquivos -->
+  <!-- Bibliotecas Externas para Exportação e Leitura de Ficheiros -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.1.0/docx.min.js"></script>
 
-  <!-- Firebase App (Core), Auth e Firestore SDKs -->
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
-  <!-- Barra Superior (Identidade Genius Mind Laranja) -->
   <header class="topbar">
     <div class="brand">
       <div class="brand-icon" title="Genius Mind">
@@ -57,18 +56,17 @@
       <button class="btn btn-ghost" id="btnAutoLayout" title="Organizar nós automaticamente">⚡ Auto-Organizar</button>
       <button class="btn btn-ghost" id="btnSave" title="Salvar no Sistema">💾 Salvar</button>
       
-      <label class="btn btn-outline" title="Importar PDF, Word (.docx), SVG, JSON, MD ou TXT">
+      <label class="btn btn-outline" title="Importar ficheiro">
         📁 Subir Ficheiro
         <input type="file" id="fileUpload" accept=".pdf,.doc,.docx,.svg,.json,.md,.txt" hidden />
       </label>
 
-      <!-- Menu de Downloads -->
       <div class="dropdown">
         <button class="btn btn-outline" id="btnDownloadMenu">⬇️ Baixar ▾</button>
         <div class="dropdown-menu" id="downloadMenu">
-          <button data-format="png">🖼️ Imagem PNG (Recortada)</button>
+          <button data-format="png">🖼️ Imagem PNG</button>
           <button data-format="svg">📐 Vetor Escalável (.svg)</button>
-          <button data-format="pdf">📕 Documento PDF (Recortado)</button>
+          <button data-format="pdf">📕 Documento PDF</button>
           <button data-format="docx">📘 Documento Word (.docx)</button>
           <button data-format="md">📝 Texto Markdown (.md)</button>
           <button data-format="json">💾 Projeto Genius Mind (.json)</button>
@@ -77,7 +75,6 @@
 
       <button class="btn btn-primary" id="btnShare">🔗 Compartilhar</button>
       
-      <!-- Área Dinâmica de Autenticação / Perfil / Logout -->
       <div id="authArea" style="display: flex; align-items: center; gap: 8px;">
         <button class="btn btn-outline" id="btnLoginModal">👤 Entrar</button>
         <button class="btn btn-outline hidden" id="btnLogout" style="border-color: #ef4444; color: #ef4444;" title="Sair da conta">🚪 Sair</button>
@@ -85,19 +82,15 @@
     </div>
   </header>
 
-  <!-- Barra Flutuante de Prompt IA -->
   <section class="ai-prompt-bar">
     <div class="ai-badge">✨ Genius IA</div>
-    <input 
-      type="text" 
-      id="aiPromptInput" 
-      placeholder="Digite um tema, ideia ou cole um resumo para gerar o mapa mental..." 
-    />
+    <input type="text" id="aiPromptInput" placeholder="Digite um tema, ideia ou cole um resumo para gerar o mapa mental..." />
     <button class="btn btn-primary" id="btnGenerateAI">Gerar Mapa</button>
   </section>
 
-  <!-- Barra Contextual de Edição -->
+  <!-- Barra Contextual de Edição com Ação Direta de Texto -->
   <div class="node-toolbar hidden" id="nodeToolbar">
+    <button class="tool-btn" id="btnEditNodeText" title="Editar texto do nó">✏️ Editar</button>
     <button class="tool-btn" id="btnAddChild" title="Adicionar sub-tópico">+ Filho</button>
     <button class="tool-btn" id="btnAddSibling" title="Adicionar tópico irmão">+ Irmão</button>
     <div class="divider"></div>
@@ -112,22 +105,16 @@
     <button class="tool-btn danger" id="btnDeleteNode" title="Excluir tópico">🗑️</button>
   </div>
 
-  <!-- Área do Mapa -->
   <main class="canvas-wrapper" id="canvasWrapper">
     <div class="canvas-stage" id="canvasStage">
       <svg class="connections-layer" id="connectionsLayer"></svg>
       <div class="nodes-layer" id="nodesLayer"></div>
     </div>
-
-    <svg class="brand-wave" viewBox="0 0 1440 120" preserveAspectRatio="none">
-      <path fill="#FF8C00" fill-opacity="0.18" d="M0,64L80,69.3C160,75,320,85,480,80C640,75,800,53,960,48C1120,43,1280,53,1360,58.7L1440,64L1440,120L0,120Z"></path>
-      <path fill="#FF5500" fill-opacity="0.25" d="M0,96L120,85.3C240,75,480,53,720,58.7C960,64,1200,96,1320,112L1440,120L1440,120L0,120Z"></path>
-    </svg>
   </main>
 
   <footer class="bottom-controls">
     <div class="shortcuts-hint">
-      <span><b>Duplo clique</b> editar texto</span> • 
+      <span><b>Duplo clique</b> ou botão Editar para alterar texto</span> • 
       <span><b>Arrastar fundo</b> mover tela</span>
     </div>
     <div class="zoom-controls">
@@ -138,15 +125,15 @@
     </div>
   </footer>
 
-  <!-- Modal de Meus Mapas / Salvos -->
+  <!-- Modal de Meus Mapas com opção de Exclusão -->
   <div class="modal-backdrop hidden" id="myMapsModal">
-    <div class="modal-card" style="max-width: 500px;">
+    <div class="modal-card" style="max-width: 550px;">
       <div class="modal-header">
-        <h3>📂 Meus Mapas Mentais</h3>
+        <h3>📂 Meus Mapas Mentais Salvos</h3>
         <button class="close-modal" id="closeMyMapsModal">✕</button>
       </div>
-      <div id="savedMapsList" style="max-height: 300px; overflow-y: auto; margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
-        <p style="color: var(--gm-muted); text-align: center; padding: 20px;">Faça login para ver os seus mapas guardados.</p>
+      <div id="savedMapsList" style="max-height: 320px; overflow-y: auto; margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <p style="color: var(--gm-muted); text-align: center; padding: 20px;">Faça login para ver os seus mapas guardados na nuvem.</p>
       </div>
     </div>
   </div>
@@ -158,15 +145,14 @@
         <h3>Compartilhar Mapa Mental</h3>
         <button class="close-modal" id="closeShareModal">✕</button>
       </div>
-      <p class="modal-desc" style="font-size: 0.85rem; color: var(--gm-muted); margin-bottom: 12px;">Qualquer pessoa com este link poderá visualizar este mapa.</p>
-      <div class="share-row" style="display: flex; gap: 8px; margin-bottom: 12px;">
+      <div class="share-row" style="display: flex; gap: 8px; margin-top: 12px;">
         <input type="text" id="shareLinkInput" readonly style="flex: 1; padding: 8px; border: 1px solid var(--gm-border); border-radius: 6px; font-size: 0.85rem; background:#0F172A; color:#fff;" />
         <button class="btn btn-primary" id="btnCopyLink">Copiar Link</button>
       </div>
     </div>
   </div>
 
-  <!-- Modal de Autenticação com Recuperação de Senha -->
+  <!-- Modal de Autenticação -->
   <div class="modal-backdrop hidden" id="authModal">
     <div class="modal-card">
       <div class="modal-header">
@@ -175,15 +161,12 @@
       </div>
       <div class="auth-form" style="display:flex; flex-direction:column; gap:10px; margin-top:12px;">
         <input type="email" id="authEmail" placeholder="Seu e-mail" style="padding:10px 12px; border:1.5px solid var(--gm-border); border-radius:10px; font-size:0.9rem; background:#0F172A; color:#fff;" />
-        <input type="password" id="authPassword" placeholder="Sua senha (mínimo 6 caracteres)" style="padding:10px 12px; border:1.5px solid var(--gm-border); border-radius:10px; font-size:0.9rem; background:#0F172A; color:#fff;" />
-        
+        <input type="password" id="authPassword" placeholder="Sua senha" style="padding:10px 12px; border:1.5px solid var(--gm-border); border-radius:10px; font-size:0.9rem; background:#0F172A; color:#fff;" />
         <button class="btn btn-primary" id="btnAuthSubmit" style="width:100%; justify-content:center; margin-top:6px;">Entrar</button>
-        
-        <div style="text-align:right; margin-top:-2px;">
+        <div style="text-align:right;">
           <button type="button" id="btnForgotPass" style="background:none; border:none; color:var(--gm-muted); font-size:0.8rem; cursor:pointer; text-decoration:underline;">Esqueci a minha senha</button>
         </div>
-
-        <p style="margin-top:8px; text-align:center; font-size:0.85rem; color:var(--gm-muted);">
+        <p style="text-align:center; font-size:0.85rem; color:var(--gm-muted);">
           Não tem uma conta? <a href="#" id="toggleAuthMode" style="color:var(--gm-orange); font-weight:700; text-decoration:none;">Registe-se</a>
         </p>
       </div>
@@ -191,7 +174,6 @@
   </div>
 
   <div class="toast hidden" id="toast"></div>
-
   <script src="script.js"></script>
 </body>
 </html>

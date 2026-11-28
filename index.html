@@ -8,7 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Bibliotecas Externas para Exportação e Leitura de Ficheiros -->
+  <!-- Bibliotecas Externas -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -88,7 +88,7 @@
     <button class="btn btn-primary" id="btnGenerateAI">Gerar Mapa</button>
   </section>
 
-  <!-- Barra Contextual de Edição com Ação Direta de Texto -->
+  <!-- Barra Contextual -->
   <div class="node-toolbar hidden" id="nodeToolbar">
     <button class="tool-btn" id="btnEditNodeText" title="Editar texto do nó">✏️ Editar</button>
     <button class="tool-btn" id="btnAddChild" title="Adicionar sub-tópico">+ Filho</button>
@@ -112,6 +112,9 @@
     </div>
   </main>
 
+  <!-- Input Flutuante de Edição Rápida (Sempre pronto e oculto por padrão) -->
+  <input type="text" id="inlineEditInput" class="hidden" placeholder="Novo texto..." />
+
   <footer class="bottom-controls">
     <div class="shortcuts-hint">
       <span><b>Duplo clique</b> ou botão Editar para alterar texto</span> • 
@@ -125,7 +128,7 @@
     </div>
   </footer>
 
-  <!-- Modal de Meus Mapas com opção de Exclusão -->
+  <!-- Modais -->
   <div class="modal-backdrop hidden" id="myMapsModal">
     <div class="modal-card" style="max-width: 550px;">
       <div class="modal-header">
@@ -133,12 +136,11 @@
         <button class="close-modal" id="closeMyMapsModal">✕</button>
       </div>
       <div id="savedMapsList" style="max-height: 320px; overflow-y: auto; margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
-        <p style="color: var(--gm-muted); text-align: center; padding: 20px;">Faça login para ver os seus mapas guardados na nuvem.</p>
+        <p style="color: var(--gm-muted); text-align: center; padding: 20px;">Faça login para ver os seus mapas.</p>
       </div>
     </div>
   </div>
 
-  <!-- Modal de Compartilhamento -->
   <div class="modal-backdrop hidden" id="shareModal">
     <div class="modal-card">
       <div class="modal-header">
@@ -152,7 +154,6 @@
     </div>
   </div>
 
-  <!-- Modal de Autenticação -->
   <div class="modal-backdrop hidden" id="authModal">
     <div class="modal-card">
       <div class="modal-header">
@@ -172,6 +173,11 @@
       </div>
     </div>
   </div>
+
+  <div class="toast hidden" id="toast"></div>
+  <script src="script.js"></script>
+</body>
+</html>
 
   <div class="toast hidden" id="toast"></div>
   <script src="script.js"></script>

@@ -46,6 +46,7 @@
       </div>
       <div class="brand-text">
         <span class="brand-title">Genius <span class="highlight">Mind</span></span>
+        <input type="text" id="mapTitleTop" class="map-title-input" value="Meu Mapa Estratégico" title="Renomear mapa" />
       </div>
     </div>
 
@@ -81,7 +82,7 @@
     </div>
   </header>
 
-  <!-- Painel Superior Central (Com Aviso acima e Renomear grande abaixo da IA) -->
+  <!-- Painel Superior Central -->
   <section class="ai-prompt-container">
     <div class="ai-notice-text">
       ⚠️ <strong>Em breve!</strong> Enquanto isso você deve utilizar: <span>Claude, ChatGPT ou Gemini</span>
@@ -123,27 +124,32 @@
     </div>
   </main>
 
-  <!-- Modal / Caixa Avançada de Edição de Texto no Meio da Tela -->
+  <!-- Modal de Edição Avançada Central com Controlo de Tamanhos (Caixa e Letra) -->
   <div class="modal-backdrop hidden" id="advancedEditModal">
     <div class="modal-card edit-advanced-card">
       <div class="modal-header">
-        <h3>✏️ Editar Texto & Estilo do Nó</h3>
+        <h3>✏️ Editor Avançado de Tópico</h3>
         <button class="close-modal" id="closeEditModal">✕</button>
       </div>
       
-      <!-- Barra de Ferramentas de Formatação -->
+      <!-- Barra de Formatação e Ajustes -->
       <div class="format-toolbar">
         <button type="button" class="fmt-btn" data-cmd="bold" title="Negrito"><b>B</b></button>
         <button type="button" class="fmt-btn" data-cmd="italic" title="Itálico"><i>I</i></button>
         <button type="button" class="fmt-btn" data-cmd="underline" title="Sublinhar"><u>U</u></button>
         <div class="divider"></div>
-        <button type="button" class="fmt-btn" data-cmd="justifyLeft" title="Alinhar à Esquerda">⬅️</button>
+        <button type="button" class="fmt-btn" data-cmd="justifyLeft" title="Esquerda">⬅️</button>
         <button type="button" class="fmt-btn" data-cmd="justifyCenter" title="Centralizar">⏹️</button>
-        <button type="button" class="fmt-btn" data-cmd="justifyRight" title="Alinhar à Direita">➡️</button>
+        <button type="button" class="fmt-btn" data-cmd="justifyRight" title="Direita">➡️</button>
+        <div class="divider"></div>
+        <!-- Botões de ajuste direto de tamanho da letra e da caixinha -->
+        <button type="button" class="fmt-btn" id="btnFontMinus" title="Diminuir Letra">A-</button>
+        <button type="button" class="fmt-btn" id="btnFontPlus" title="Aumentar Letra">A+</button>
+        <button type="button" class="fmt-btn" id="btnBoxLarger" title="Expandir Caixa">📦+</button>
+        <button type="button" class="fmt-btn" id="btnBoxSmaller" title="Reduzir Caixa">📦-</button>
       </div>
 
-      <!-- Caixa de Texto Editável e Redimensionável (Resize ativado) -->
-      <div id="modalEditableArea" contenteditable="true" class="editable-content-box" placeholder="Digite o conteúdo do tópico aqui..."></div>
+      <div id="modalEditableArea" contenteditable="true" class="editable-content-box" placeholder="Digite o conteúdo..."></div>
 
       <div class="modal-actions" style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;">
         <button class="btn btn-outline" id="btnCancelEdit">Cancelar</button>
@@ -165,7 +171,7 @@
     </div>
   </footer>
 
-  <!-- Modais Principais -->
+  <!-- Modais -->
   <div class="modal-backdrop hidden" id="myMapsModal">
     <div class="modal-card" style="max-width: 580px;">
       <div class="modal-header">

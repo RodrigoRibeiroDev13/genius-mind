@@ -11,8 +11,6 @@
   <!-- Bibliotecas Externas -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.1.0/docx.min.js"></script>
 
   <!-- Firebase SDKs -->
@@ -58,7 +56,7 @@
       
       <label class="btn btn-outline" title="Importar ficheiro">
         📁 Subir Ficheiro
-        <input type="file" id="fileUpload" accept=".pdf,.doc,.docx,.svg,.json,.md,.txt" hidden />
+        <input type="file" id="fileUpload" accept=".svg,.json,.md,.txt" hidden />
       </label>
 
       <div class="dropdown">
@@ -68,8 +66,6 @@
           <button data-format="svg">📐 Vetor Escalável (.svg)</button>
           <button data-format="pdf">📕 Documento PDF</button>
           <button data-format="docx">📘 Documento Word (.docx)</button>
-          <button data-format="md">📝 Texto Markdown (.md)</button>
-          <button data-format="json">💾 Projeto Genius Mind (.json)</button>
         </div>
       </div>
 

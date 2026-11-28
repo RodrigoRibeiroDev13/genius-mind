@@ -15,7 +15,7 @@ if (!firebase.apps.length) {
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Estado Global inicializado exatamente no centro do mundo virtual (5000, 5000)
+// Estado Global inicializado no centro exato do mundo virtual (5000, 5000)
 let nodes = [
     { id: 'node-root', text: 'Meu Mapa Estratégico', x: 5000, y: 5000, parent: null, color: '#FF5E00' }
 ];
@@ -49,6 +49,7 @@ window.onload = () => {
     initToolbarActions();
     initDownloadMenu();
     initAIAndFiles();
+    initMyMapsModal();
     loadMapFromURL();
     
     // Centralização inicial garantida e imediata no nó raiz
@@ -70,7 +71,7 @@ function render() {
     nodesLayer.innerHTML = '';
     connectionsLayer.innerHTML = '';
 
-    // Desenhar Linhas de Conexão com curvas suaves ou retas precisas
+    // Desenhar Linhas de Conexão com curvas suaves
     nodes.forEach(node => {
         if (node.parent) {
             const parent = nodes.find(n => n.id === node.parent);
@@ -102,11 +103,20 @@ function render() {
         el.style.borderColor = node.color || '#334155';
         el.textContent = node.text;
 
-        // Duplo clique para editar texto diretamente
+        // Seleção por clique simples
+        el.addEventListener('click', (e) => {
+            selectedNodeId = node.id;
+            updateNodeToolbar();
+            render();
+            e.stopPropagation();
+        });
+
+        // Duplo clique para editar texto diretamente com foco imediato
         el.addEventListener('dblclick', (e) => {
             e.stopPropagation();
             el.contentEditable = true;
             el.focus();
+            document.execCommand('selectAll', false, null);
         });
 
         el.addEventListener('blur', () => {
@@ -352,6 +362,67 @@ function initToolbarActions() {
     };
 }
 
+// Gestão da Modal "Meus Mapas"
+function initMyMapsModal() {
+    const modal = document.getElementById('myMapsModal');
+    const btn = document.getElementById('btnMyMaps');
+    const closeBtn = document.getElementById('closeMyMapsModal');
+    const listContainer = document.getElementById('savedMapsList');
+
+    btn.onclick = async () => {
+        const user = auth.currentUser;
+        if (!user) {
+            showToast('Faça login para aceder aos seus mapas.');
+            document.getElementById('authModal').classList.remove('hidden');
+            return;
+        }
+
+        modal.classList.remove('hidden');
+        listContainer.innerHTML = '<p style="color:var(--gm-muted); text-align:center;">A carregar mapas...</p>';
+
+        try {
+            const snapshot = await db.collection('maps').where('owner', '==', user.uid).get();
+            if (snapshot.empty) {
+                listContainer.innerHTML = '<p style="color:var(--gm-muted); text-align:center; padding: 20px;">Ainda não tem mapas salvos.</p>';
+                return;
+            }
+
+            listContainer.innerHTML = '';
+            snapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                const item = document.createElement('div');
+                item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--gm-border);';
+                
+                const titleSpan = document.createElement('span');
+                titleSpan.textContent = data.title || 'Sem título';
+                titleSpan.style.cssText = 'color: #fff; font-weight: 600; cursor: pointer;';
+                titleSpan.onclick = () => {
+                    nodes = data.nodes || nodes;
+                    mapTitleInput.value = data.title || 'Meu Mapa';
+                    centerOnNode('node-root');
+                    render();
+                    modal.classList.add('hidden');
+                    showToast('Mapa carregado!');
+                };
+
+                const openBtn = document.createElement('button');
+                openBtn.textContent = 'Abrir';
+                openBtn.className = 'btn btn-primary';
+                openBtn.style.cssText = 'padding: 4px 10px; font-size: 0.75rem;';
+                openBtn.onclick = titleSpan.onclick;
+
+                item.appendChild(titleSpan);
+                item.appendChild(openBtn);
+                listContainer.appendChild(item);
+            });
+        } catch (err) {
+            listContainer.innerHTML = '<p style="color:#ef4444; text-align:center;">Erro ao carregar mapas.</p>';
+        }
+    };
+
+    closeBtn.onclick = () => modal.classList.add('hidden');
+}
+
 // Carregar por URL (?map=...)
 async function loadMapFromURL() {
     const params = new URLSearchParams(window.location.search);
@@ -425,7 +496,7 @@ function downloadBlob(blob, filename) {
     URL.revokeObjectURL(url);
 }
 
-// Leitura de Arquivos e IA
+// Leitura de Ficheiros e IA
 function initAIAndFiles() {
     document.getElementById('btnGenerateAI').onclick = () => {
         const prompt = document.getElementById('aiPromptInput').value.trim();

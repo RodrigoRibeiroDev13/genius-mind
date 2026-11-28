@@ -66,7 +66,7 @@ function render() {
     nodesLayer.innerHTML = '';
     connectionsLayer.innerHTML = '';
 
-    // 1. Desenhar Linhas de Conexão SVG em tempo real
+    // 1. Desenhar Linhas de Conexão SVG em tempo real baseadas na posição exata dos nós
     nodes.forEach(node => {
         if (node.parent) {
             const parent = nodes.find(n => n.id === node.parent);
@@ -98,6 +98,7 @@ function render() {
         el.style.borderColor = node.color || '#334155';
         el.textContent = node.text;
 
+        // Clique simples para selecionar o nó e exibir a barra flutuante
         el.addEventListener('click', (e) => {
             selectedNodeId = node.id;
             updateNodeToolbar();
@@ -105,28 +106,14 @@ function render() {
             e.stopPropagation();
         });
 
+        // Duplo clique aciona diretamente a edição fiável
         el.addEventListener('dblclick', (e) => {
             e.stopPropagation();
-            ativarEdicaoNoNo(node.id);
+            abrirEditorTexto(node.id);
         });
 
-        el.addEventListener('blur', () => {
-            if (el.contentEditable === 'true') {
-                el.contentEditable = false;
-                node.text = el.textContent.trim() || 'Sem título';
-                render();
-            }
-        });
-
-        el.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                el.blur();
-            }
-        });
-
+        // Arrastar Nó (Drag & Drop com atualização fluída das linhas em tempo real)
         el.addEventListener('mousedown', (e) => {
-            if (el.contentEditable === 'true') return;
             selectedNodeId = node.id;
             draggingNodeId = node.id;
             
@@ -145,17 +132,17 @@ function render() {
     updateNodeToolbar();
 }
 
-// Função auxiliar para ativar a edição de texto com segurança
-function ativarEdicaoNoNo(nodeId) {
-    const el = document.getElementById(nodeId);
-    if (!el) return;
-    el.contentEditable = true;
-    el.focus();
-    const range = document.createRange();
-    range.selectNodeContents(el);
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
+// Função de edição de texto 100% fiável por prompt/input controlado
+function abrirEditorTexto(nodeId) {
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) return;
+
+    const novoTexto = prompt("Editar texto do subtópico:", node.text);
+    if (novoTexto !== null) {
+        node.text = novoTexto.trim() || 'Sem título';
+        render();
+        showToast('Texto atualizado com sucesso!');
+    }
 }
 
 // Movimentação do Canvas (Pan & Zoom)
@@ -181,7 +168,7 @@ function initCanvasInteractions() {
                 const stageRect = canvasStage.getBoundingClientRect();
                 node.x = (e.clientX - stageRect.left) / scale - dragOffsetX;
                 node.y = (e.clientY - stageRect.top) / scale - dragOffsetY;
-                render();
+                render(); // Recalcula as linhas SVG em tempo real à medida que arrastas!
             }
         }
     });
@@ -252,10 +239,10 @@ function updateNodeToolbar() {
 }
 
 function initToolbarActions() {
-    // Botão de Edição de Texto dedicado na barra flutuante
+    // Botão "Editar" na barra flutuante agora chama a função de edição de texto com segurança
     document.getElementById('btnEditNodeText').onclick = () => {
         if (selectedNodeId) {
-            ativarEdicaoNoNo(selectedNodeId);
+            abrirEditorTexto(selectedNodeId);
         }
     };
 
@@ -379,7 +366,7 @@ function initToolbarActions() {
     };
 }
 
-// Gestão de "Meus Mapas" com a NOVA opção de Excluir 🗑️
+// Gestão de "Meus Mapas" com opção de Excluir 🗑️
 function initMyMapsModal() {
     const modal = document.getElementById('myMapsModal');
     const btn = document.getElementById('btnMyMaps');
@@ -433,18 +420,17 @@ function initMyMapsModal() {
                 openBtn.style.cssText = 'padding: 4px 10px; font-size: 0.75rem;';
                 openBtn.onclick = titleSpan.onclick;
 
-                // Botão de Excluir mapa do Firestore
                 const deleteBtn = document.createElement('button');
                 deleteBtn.textContent = '🗑️ Excluir';
                 deleteBtn.className = 'btn btn-outline';
                 deleteBtn.style.cssText = 'padding: 4px 10px; font-size: 0.75rem; border-color: #ef4444; color: #ef4444;';
                 deleteBtn.onclick = async (e) => {
                     e.stopPropagation();
-                    if (confirm(`Tem a certeza que deseja excluir o mapa "${data.title || 'Sem título'}"?`)) {
+                    if (confirm(`Deseja excluir o mapa "${data.title || 'Sem título'}"?`)) {
                         try {
                             await db.collection('maps').doc(mapId).delete();
                             showToast('Mapa excluído com sucesso!');
-                            btn.click(); // Recarrega a lista
+                            btn.click();
                         } catch (err) {
                             showToast('Erro ao excluir: ' + err.message);
                         }
@@ -453,7 +439,6 @@ function initMyMapsModal() {
 
                 actionsDiv.appendChild(openBtn);
                 actionsDiv.appendChild(deleteBtn);
-
                 item.appendChild(titleSpan);
                 item.appendChild(actionsDiv);
                 listContainer.appendChild(item);
@@ -486,7 +471,7 @@ async function loadMapFromURL() {
     }
 }
 
-// CORREÇÃO DOS DOWNLOADS (Suporte a JSON, MD, SVG, PNG, PDF, DOCX)
+// Menus de Download
 function initDownloadMenu() {
     document.querySelectorAll('#downloadMenu button').forEach(btn => {
         btn.onclick = async () => {
@@ -550,11 +535,11 @@ function downloadBlob(blob, filename) {
 
 function initAIAndFiles() {
     document.getElementById('btnGenerateAI').onclick = () => {
-        const prompt = document.getElementById('aiPromptInput').value.trim();
-        if (!prompt) return;
+        const promptText = document.getElementById('aiPromptInput').value.trim();
+        if (!promptText) return;
         
         nodes = [
-            { id: 'node-root', text: prompt, x: 5000, y: 5000, parent: null, color: '#FF5E00' },
+            { id: 'node-root', text: promptText, x: 5000, y: 5000, parent: null, color: '#FF5E00' },
             { id: 'n-1', text: 'Conceito Inicial', x: 5300, y: 4900, parent: 'node-root', color: '#38BDF8' },
             { id: 'n-2', text: 'Aplicações Práticas', x: 5300, y: 5000, parent: 'node-root', color: '#4ADE80' },
             { id: 'n-3', text: 'Próximos Passos', x: 5300, y: 5100, parent: 'node-root', color: '#A855F7' }
@@ -621,7 +606,7 @@ function initAuth() {
         const pass = authPassword.value;
         try {
             if (isRegistering) {
-                await auth.createUserWithEmailAndPassword(email, pass);
+                await auth.createUserWithEmailProvider ? null : auth.createUserWithEmailAndPassword(email, pass);
                 showToast('Conta criada com sucesso!');
             } else {
                 await auth.signInWithEmailAndPassword(email, pass);

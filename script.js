@@ -61,23 +61,29 @@ function showToast(msg) {
     setTimeout(() => toastEl.classList.add('hidden'), 3000);
 }
 
-// Renderização Geral
+// Renderização com linhas SVG rigorosamente alinhadas ao centro exato das caixas
 function render() {
     if (!nodesLayer || !connectionsLayer) return;
     nodesLayer.innerHTML = '';
     connectionsLayer.innerHTML = '';
 
-    // 1. Linhas SVG dinâmicas em tempo real
+    // 1. Desenhar Linhas SVG centradas
     nodes.forEach(node => {
         if (node.parent) {
             const parent = nodes.find(n => n.id === node.parent);
             if (parent) {
                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                const x1 = parent.x + 100;
-                const y1 = parent.y + 30;
-                const x2 = node.x + 100;
-                const y2 = node.y + 30;
-                const curve = `M ${x1} ${y1} C ${x1 + 80} ${y1}, ${x2 - 80} ${y2}, ${x2} ${y2}`;
+                
+                // Dimensões estimadas dinâmicas das caixas para cálculo exato do centro
+                const boxWidth = 200;
+                const boxHeight = 55;
+
+                const x1 = parent.x + (boxWidth / 2);
+                const y1 = parent.y + (boxHeight / 2);
+                const x2 = node.x + (boxWidth / 2);
+                const y2 = node.y + (boxHeight / 2);
+
+                const curve = `M ${x1} ${y1} C ${x1 + 70} ${y1}, ${x2 - 70} ${y2}, ${x2} ${y2}`;
                 
                 line.setAttribute('d', curve);
                 line.setAttribute('stroke', node.color || '#334155');
@@ -88,7 +94,7 @@ function render() {
         }
     });
 
-    // 2. Nós Interativos
+    // 2. Desenhar Nós Interativos
     nodes.forEach(node => {
         const el = document.createElement('div');
         el.className = `map-node ${node.id === selectedNodeId ? 'selected' : ''}`;
@@ -132,7 +138,7 @@ function render() {
     updateNodeToolbar();
 }
 
-// SISTEMA DE EDIÇÃO DIRETA COM INPUT FLUTUANTE (Sem falhas!)
+// Sistema de Edição por Input Flutuante
 function abrirInputEdicao(nodeId) {
     const node = nodes.find(n => n.id === nodeId);
     if (!node || !inlineEditInput) return;
@@ -141,13 +147,11 @@ function abrirInputEdicao(nodeId) {
     inlineEditInput.value = node.text;
     inlineEditInput.classList.remove('hidden');
 
-    // Posiciona o input exatamente em cima do nó no canvas
     inlineEditInput.style.left = `${node.x}px`;
     inlineEditInput.style.top = `${node.y}px`;
     inlineEditInput.focus();
     inlineEditInput.select();
 
-    // Ao pressionar Enter ou perder o foco, guarda o texto e oculta o input
     inlineEditInput.onkeydown = (e) => {
         if (e.key === 'Enter') {
             salvarEdicaoInput(nodeId);
@@ -204,7 +208,7 @@ function initCanvasInteractions() {
                 node.x = (e.clientX - stageRect.left) / scale - dragOffsetX;
                 node.y = (e.clientY - stageRect.top) / scale - dragOffsetY;
                 fecharInputEdicao();
-                render(); // Linhas atualizam em tempo real
+                render();
             }
         }
     });
@@ -275,7 +279,6 @@ function updateNodeToolbar() {
 }
 
 function initToolbarActions() {
-    // Botão Editar na barra flutuante
     document.getElementById('btnEditNodeText').onclick = () => {
         if (selectedNodeId) {
             abrirInputEdicao(selectedNodeId);
@@ -402,7 +405,7 @@ function initToolbarActions() {
     };
 }
 
-// Gestão de "Meus Mapas" com Exclusão
+// Gestão de "Meus Mapas" com botões de Abrir, Renomear e Excluir
 function initMyMapsModal() {
     const modal = document.getElementById('myMapsModal');
     const btn = document.getElementById('btnMyMaps');
@@ -448,13 +451,31 @@ function initMyMapsModal() {
                 };
 
                 const actionsDiv = document.createElement('div');
-                actionsDiv.style.cssText = 'display: flex; gap: 8px;';
+                actionsDiv.style.cssText = 'display: flex; gap: 6px;';
 
                 const openBtn = document.createElement('button');
                 openBtn.textContent = 'Abrir';
                 openBtn.className = 'btn btn-primary';
                 openBtn.style.cssText = 'padding: 4px 10px; font-size: 0.75rem;';
                 openBtn.onclick = titleSpan.onclick;
+
+                const renameBtn = document.createElement('button');
+                renameBtn.textContent = '✏️ Renomear';
+                renameBtn.className = 'btn btn-outline';
+                renameBtn.style.cssText = 'padding: 4px 10px; font-size: 0.75rem; border-color: #38bdf8; color: #38bdf8;';
+                renameBtn.onclick = async (e) => {
+                    e.stopPropagation();
+                    const novoNome = prompt('Novo nome para o mapa:', data.title || '');
+                    if (novoNome !== null && novoNome.trim() !== '') {
+                        try {
+                            await db.collection('maps').doc(mapId).update({ title: novoNome.trim() });
+                            showToast('Mapa renomeado com sucesso!');
+                            btn.click();
+                        } catch (err) {
+                            showToast('Erro ao renomear: ' + err.message);
+                        }
+                    }
+                };
 
                 const deleteBtn = document.createElement('button');
                 deleteBtn.textContent = '🗑️ Excluir';
@@ -474,7 +495,9 @@ function initMyMapsModal() {
                 };
 
                 actionsDiv.appendChild(openBtn);
+                actionsDiv.appendChild(renameBtn);
                 actionsDiv.appendChild(deleteBtn);
+
                 item.appendChild(titleSpan);
                 item.appendChild(actionsDiv);
                 listContainer.appendChild(item);

@@ -15,7 +15,6 @@ if (!firebase.apps.length) {
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Estado Global inicializado no centro exato do mundo virtual (5000, 5000)
 let nodes = [
     { id: 'node-root', text: 'Meu Mapa Estratégico', x: 5000, y: 5000, parent: null, color: '#FF5E00' }
 ];
@@ -30,10 +29,8 @@ let draggingNodeId = null;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 
-// Elementos DOM
 let nodesLayer, connectionsLayer, canvasStage, canvasWrapper, zoomLabel, nodeToolbar, mapTitleInput, toastEl;
 
-// Inicialização imediata ao carregar a janela
 window.onload = () => {
     nodesLayer = document.getElementById('nodesLayer');
     connectionsLayer = document.getElementById('connectionsLayer');
@@ -52,12 +49,10 @@ window.onload = () => {
     initMyMapsModal();
     loadMapFromURL();
     
-    // Centralização inicial garantida e imediata no nó raiz
     centerOnNode('node-root');
     render();
 };
 
-// Mensagens Toast
 function showToast(msg) {
     if (!toastEl) return;
     toastEl.textContent = msg;
@@ -71,20 +66,16 @@ function render() {
     nodesLayer.innerHTML = '';
     connectionsLayer.innerHTML = '';
 
-    // 1. Desenhar Linhas de Conexão Dinâmicas entre Pai e Filho
+    // 1. Desenhar Linhas de Conexão SVG em tempo real
     nodes.forEach(node => {
         if (node.parent) {
             const parent = nodes.find(n => n.id === node.parent);
             if (parent) {
                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                
-                // Pontos de ancoragem dinâmicos (centro das caixas considerando largura média de 200px e altura de 60px)
                 const x1 = parent.x + 100;
                 const y1 = parent.y + 30;
                 const x2 = node.x + 100;
                 const y2 = node.y + 30;
-                
-                // Curva Bézier suave conectando os nós
                 const curve = `M ${x1} ${y1} C ${x1 + 80} ${y1}, ${x2 - 80} ${y2}, ${x2} ${y2}`;
                 
                 line.setAttribute('d', curve);
@@ -96,7 +87,7 @@ function render() {
         }
     });
 
-    // 2. Desenhar Nós do Mapa Interativos
+    // 2. Desenhar Nós Interativos
     nodes.forEach(node => {
         const el = document.createElement('div');
         el.className = `map-node ${node.id === selectedNodeId ? 'selected' : ''}`;
@@ -107,7 +98,6 @@ function render() {
         el.style.borderColor = node.color || '#334155';
         el.textContent = node.text;
 
-        // Seleção por clique simples
         el.addEventListener('click', (e) => {
             selectedNodeId = node.id;
             updateNodeToolbar();
@@ -115,28 +105,19 @@ function render() {
             e.stopPropagation();
         });
 
-        // Duplo clique rigoroso para ativar edição de texto imediata
         el.addEventListener('dblclick', (e) => {
             e.stopPropagation();
-            el.contentEditable = true;
-            el.focus();
-            
-            // Seleciona todo o texto automaticamente para facilitar a reescrita
-            const range = document.createRange();
-            range.selectNodeContents(el);
-            const sel = window.getSelection();
-            sel.removeAllRanges();
-            sel.addRange(range);
+            ativarEdicaoNoNo(node.id);
         });
 
-        // Salvar alterações ao retirar o foco (blur)
         el.addEventListener('blur', () => {
-            el.contentEditable = false;
-            node.text = el.textContent.trim() || 'Sem título';
-            render();
+            if (el.contentEditable === 'true') {
+                el.contentEditable = false;
+                node.text = el.textContent.trim() || 'Sem título';
+                render();
+            }
         });
 
-        // Prevenir perda de foco ao pressionar Enter dentro da caixa (opcionalmente pode salvar ou ignorar)
         el.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -144,9 +125,8 @@ function render() {
             }
         });
 
-        // Seleção e Arrastar Nó (Drag & Drop fluído com atualização em tempo real das linhas)
         el.addEventListener('mousedown', (e) => {
-            if (el.contentEditable === 'true') return; // Não arrasta se estiver a editar texto
+            if (el.contentEditable === 'true') return;
             selectedNodeId = node.id;
             draggingNodeId = node.id;
             
@@ -163,6 +143,19 @@ function render() {
     });
 
     updateNodeToolbar();
+}
+
+// Função auxiliar para ativar a edição de texto com segurança
+function ativarEdicaoNoNo(nodeId) {
+    const el = document.getElementById(nodeId);
+    if (!el) return;
+    el.contentEditable = true;
+    el.focus();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
 }
 
 // Movimentação do Canvas (Pan & Zoom)
@@ -188,7 +181,7 @@ function initCanvasInteractions() {
                 const stageRect = canvasStage.getBoundingClientRect();
                 node.x = (e.clientX - stageRect.left) / scale - dragOffsetX;
                 node.y = (e.clientY - stageRect.top) / scale - dragOffsetY;
-                render(); // As linhas atualizam dinamicamente aqui em tempo real!
+                render();
             }
         }
     });
@@ -198,7 +191,6 @@ function initCanvasInteractions() {
         draggingNodeId = null;
     });
 
-    // Zoom centralizado baseado na roda do rato
     canvasWrapper.addEventListener('wheel', (e) => {
         e.preventDefault();
         const zoomFactor = 1.1;
@@ -239,7 +231,6 @@ function centerOnNode(nodeId) {
     applyTransform();
 }
 
-// Barra de Ações do Nó (Contextual)
 function updateNodeToolbar() {
     if (!selectedNodeId) {
         nodeToolbar.classList.add('hidden');
@@ -254,13 +245,20 @@ function updateNodeToolbar() {
     if (el) {
         const rect = el.getBoundingClientRect();
         const wrapperRect = canvasWrapper.getBoundingClientRect();
-        nodeToolbar.style.top = `${rect.top - wrapperRect.top - 50}px`;
-        nodeToolbar.style.left = `${rect.left - wrapperRect.left + (rect.width / 2) - 100}px`;
+        nodeToolbar.style.top = `${rect.top - wrapperRect.top - 55}px`;
+        nodeToolbar.style.left = `${rect.left - wrapperRect.left + (rect.width / 2) - 130}px`;
         nodeToolbar.classList.remove('hidden');
     }
 }
 
 function initToolbarActions() {
+    // Botão de Edição de Texto dedicado na barra flutuante
+    document.getElementById('btnEditNodeText').onclick = () => {
+        if (selectedNodeId) {
+            ativarEdicaoNoNo(selectedNodeId);
+        }
+    };
+
     document.getElementById('btnAddChild').onclick = () => {
         if (!selectedNodeId) return;
         const parent = nodes.find(n => n.id === selectedNodeId);
@@ -381,7 +379,7 @@ function initToolbarActions() {
     };
 }
 
-// Gestão da Modal "Meus Mapas" (Listagem Firestore)
+// Gestão de "Meus Mapas" com a NOVA opção de Excluir 🗑️
 function initMyMapsModal() {
     const modal = document.getElementById('myMapsModal');
     const btn = document.getElementById('btnMyMaps');
@@ -409,12 +407,14 @@ function initMyMapsModal() {
             listContainer.innerHTML = '';
             snapshot.forEach(docSnap => {
                 const data = docSnap.data();
+                const mapId = docSnap.id;
+
                 const item = document.createElement('div');
                 item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--gm-border);';
                 
                 const titleSpan = document.createElement('span');
                 titleSpan.textContent = data.title || 'Sem título';
-                titleSpan.style.cssText = 'color: #fff; font-weight: 600; cursor: pointer;';
+                titleSpan.style.cssText = 'color: #fff; font-weight: 600; cursor: pointer; flex: 1;';
                 titleSpan.onclick = () => {
                     nodes = data.nodes || nodes;
                     mapTitleInput.value = data.title || 'Meu Mapa';
@@ -424,14 +424,38 @@ function initMyMapsModal() {
                     showToast('Mapa carregado!');
                 };
 
+                const actionsDiv = document.createElement('div');
+                actionsDiv.style.cssText = 'display: flex; gap: 8px;';
+
                 const openBtn = document.createElement('button');
                 openBtn.textContent = 'Abrir';
                 openBtn.className = 'btn btn-primary';
                 openBtn.style.cssText = 'padding: 4px 10px; font-size: 0.75rem;';
                 openBtn.onclick = titleSpan.onclick;
 
+                // Botão de Excluir mapa do Firestore
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = '🗑️ Excluir';
+                deleteBtn.className = 'btn btn-outline';
+                deleteBtn.style.cssText = 'padding: 4px 10px; font-size: 0.75rem; border-color: #ef4444; color: #ef4444;';
+                deleteBtn.onclick = async (e) => {
+                    e.stopPropagation();
+                    if (confirm(`Tem a certeza que deseja excluir o mapa "${data.title || 'Sem título'}"?`)) {
+                        try {
+                            await db.collection('maps').doc(mapId).delete();
+                            showToast('Mapa excluído com sucesso!');
+                            btn.click(); // Recarrega a lista
+                        } catch (err) {
+                            showToast('Erro ao excluir: ' + err.message);
+                        }
+                    }
+                };
+
+                actionsDiv.appendChild(openBtn);
+                actionsDiv.appendChild(deleteBtn);
+
                 item.appendChild(titleSpan);
-                item.appendChild(openBtn);
+                item.appendChild(actionsDiv);
                 listContainer.appendChild(item);
             });
         } catch (err) {
@@ -442,7 +466,6 @@ function initMyMapsModal() {
     closeBtn.onclick = () => modal.classList.add('hidden');
 }
 
-// Carregar por URL (?map=...)
 async function loadMapFromURL() {
     const params = new URLSearchParams(window.location.search);
     const mapId = params.get('map');
@@ -463,7 +486,7 @@ async function loadMapFromURL() {
     }
 }
 
-// Menus de Download e Exportação
+// CORREÇÃO DOS DOWNLOADS (Suporte a JSON, MD, SVG, PNG, PDF, DOCX)
 function initDownloadMenu() {
     document.querySelectorAll('#downloadMenu button').forEach(btn => {
         btn.onclick = async () => {
@@ -471,10 +494,17 @@ function initDownloadMenu() {
             if (format === 'json') {
                 const blob = new Blob([JSON.stringify({ title: mapTitleInput.value, nodes }, null, 2)], { type: 'application/json' });
                 downloadBlob(blob, `${mapTitleInput.value}.json`);
+                showToast('Download JSON concluído!');
             } else if (format === 'md') {
                 const md = nodes.map(n => `- ${n.text}`).join('\n');
                 const blob = new Blob([md], { type: 'text/markdown' });
                 downloadBlob(blob, `${mapTitleInput.value}.md`);
+                showToast('Download Markdown concluído!');
+            } else if (format === 'svg') {
+                const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="10000" height="10000">${connectionsLayer.innerHTML}${nodesLayer.innerHTML}</svg>`;
+                const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+                downloadBlob(blob, `${mapTitleInput.value}.svg`);
+                showToast('Download SVG concluído!');
             } else if (format === 'png' || format === 'pdf') {
                 showToast('A gerar documento...');
                 const canvas = await html2canvas(nodesLayer, { backgroundColor: '#0f172a', scale: 2 });
@@ -483,11 +513,13 @@ function initDownloadMenu() {
                     link.download = `${mapTitleInput.value}.png`;
                     link.href = canvas.toDataURL();
                     link.click();
+                    showToast('Download PNG concluído!');
                 } else {
                     const { jsPDF } = window.jspdf;
                     const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? 'landscape' : 'portrait', unit: 'px', format: [canvas.width, canvas.height] });
                     pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
                     pdf.save(`${mapTitleInput.value}.pdf`);
+                    showToast('Download PDF concluído!');
                 }
             } else if (format === 'docx') {
                 const { Document, Packer, Paragraph, TextRun } = window.docx;
@@ -501,6 +533,7 @@ function initDownloadMenu() {
                 });
                 const blob = await Packer.toBlob(doc);
                 downloadBlob(blob, `${mapTitleInput.value}.docx`);
+                showToast('Download Word (.docx) concluído!');
             }
         };
     });
@@ -515,7 +548,6 @@ function downloadBlob(blob, filename) {
     URL.revokeObjectURL(url);
 }
 
-// Leitura de Ficheiros e IA
 function initAIAndFiles() {
     document.getElementById('btnGenerateAI').onclick = () => {
         const prompt = document.getElementById('aiPromptInput').value.trim();
@@ -562,7 +594,6 @@ function initAIAndFiles() {
     };
 }
 
-// Autenticação (Firebase)
 function initAuth() {
     const authModal = document.getElementById('authModal');
     const btnLoginModal = document.getElementById('btnLoginModal');

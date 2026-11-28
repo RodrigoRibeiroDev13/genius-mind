@@ -285,8 +285,8 @@ body, html {
   position: absolute;
   width: 10000px;
   height: 10000px;
-  top: -4000px;
-  left: -4000px;
+  top: 0;
+  left: 0;
   transform-origin: 0 0;
 }
 
@@ -294,8 +294,8 @@ body, html {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 10000px;
+  height: 10000px;
   pointer-events: none;
   z-index: 1;
 }
@@ -304,9 +304,10 @@ body, html {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 10000px;
+  height: 10000px;
   z-index: 2;
+  pointer-events: none;
 }
 
 /* Nós do Mapa */
@@ -325,6 +326,7 @@ body, html {
   cursor: pointer;
   user-select: none;
   outline: none;
+  pointer-events: auto;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -335,6 +337,11 @@ body, html {
 .map-node.selected {
   border-color: var(--gm-orange);
   box-shadow: 0 0 0 3px rgba(255, 94, 0, 0.3);
+}
+
+.map-node.root-node {
+  background: linear-gradient(135deg, #FF8C00, #FF5500);
+  border-color: #FF5E00;
 }
 
 .map-node[contenteditable="true"]:focus {

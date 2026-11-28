@@ -53,11 +53,12 @@
 
     <div class="top-actions">
       <button class="btn btn-ghost" id="btnNewMap" title="Criar novo mapa limpo">+ Novo</button>
+      <button class="btn btn-ghost" id="btnMyMaps" title="Meus Mapas salvos na nuvem">📂 Meus Mapas</button>
       <button class="btn btn-ghost" id="btnAutoLayout" title="Organizar nós automaticamente">⚡ Auto-Organizar</button>
       <button class="btn btn-ghost" id="btnSave" title="Salvar no Sistema">💾 Salvar</button>
       
       <label class="btn btn-outline" title="Importar PDF, Word (.docx), SVG, JSON, MD ou TXT">
-        📂 Subir Arquivo
+        📁 Subir Ficheiro
         <input type="file" id="fileUpload" accept=".pdf,.doc,.docx,.svg,.json,.md,.txt" hidden />
       </label>
 
@@ -99,7 +100,6 @@
   <div class="node-toolbar hidden" id="nodeToolbar">
     <button class="tool-btn" id="btnAddChild" title="Adicionar sub-tópico">+ Filho</button>
     <button class="tool-btn" id="btnAddSibling" title="Adicionar tópico irmão">+ Irmão</button>
-    <button class="tool-btn" id="btnExpandAI" title="Expandir este tópico com IA">✨ Expandir IA</button>
     <div class="divider"></div>
     <div class="color-swatches">
       <button class="swatch" data-color="#FF5E00" style="background:#FF5E00"></button>
@@ -127,10 +127,8 @@
 
   <footer class="bottom-controls">
     <div class="shortcuts-hint">
-      <span><b>Duplo clique</b> editar</span> • 
-      <span><b>Tab</b> sub-tópico</span> • 
-      <span><b>Enter</b> irmão</span> • 
-      <span><b>Arrastar fundo</b> mover</span>
+      <span><b>Duplo clique</b> editar texto</span> • 
+      <span><b>Arrastar fundo</b> mover tela</span>
     </div>
     <div class="zoom-controls">
       <button id="btnZoomOut">−</button>
@@ -139,6 +137,19 @@
       <button id="btnZoomReset" title="Centralizar">🎯</button>
     </div>
   </footer>
+
+  <!-- Modal de Meus Mapas / Salvos -->
+  <div class="modal-backdrop hidden" id="myMapsModal">
+    <div class="modal-card" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3>📂 Meus Mapas Mentais</h3>
+        <button class="close-modal" id="closeMyMapsModal">✕</button>
+      </div>
+      <div id="savedMapsList" style="max-height: 300px; overflow-y: auto; margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <p style="color: var(--gm-muted); text-align: center; padding: 20px;">Faça login para ver os seus mapas guardados.</p>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal de Compartilhamento -->
   <div class="modal-backdrop hidden" id="shareModal">
@@ -149,7 +160,7 @@
       </div>
       <p class="modal-desc" style="font-size: 0.85rem; color: var(--gm-muted); margin-bottom: 12px;">Qualquer pessoa com este link poderá visualizar este mapa.</p>
       <div class="share-row" style="display: flex; gap: 8px; margin-bottom: 12px;">
-        <input type="text" id="shareLinkInput" readonly style="flex: 1; padding: 8px; border: 1px solid var(--gm-border); border-radius: 6px; font-size: 0.85rem;" />
+        <input type="text" id="shareLinkInput" readonly style="flex: 1; padding: 8px; border: 1px solid var(--gm-border); border-radius: 6px; font-size: 0.85rem; background:#0F172A; color:#fff;" />
         <button class="btn btn-primary" id="btnCopyLink">Copiar Link</button>
       </div>
     </div>
@@ -163,12 +174,11 @@
         <button class="close-modal" id="closeAuthModal">✕</button>
       </div>
       <div class="auth-form" style="display:flex; flex-direction:column; gap:10px; margin-top:12px;">
-        <input type="email" id="authEmail" placeholder="Seu e-mail" style="padding:10px 12px; border:1.5px solid var(--gm-border); border-radius:10px; font-size:0.9rem;" />
-        <input type="password" id="authPassword" placeholder="Sua senha (mínimo 6 caracteres)" style="padding:10px 12px; border:1.5px solid var(--gm-border); border-radius:10px; font-size:0.9rem;" />
+        <input type="email" id="authEmail" placeholder="Seu e-mail" style="padding:10px 12px; border:1.5px solid var(--gm-border); border-radius:10px; font-size:0.9rem; background:#0F172A; color:#fff;" />
+        <input type="password" id="authPassword" placeholder="Sua senha (mínimo 6 caracteres)" style="padding:10px 12px; border:1.5px solid var(--gm-border); border-radius:10px; font-size:0.9rem; background:#0F172A; color:#fff;" />
         
         <button class="btn btn-primary" id="btnAuthSubmit" style="width:100%; justify-content:center; margin-top:6px;">Entrar</button>
         
-        <!-- Opção de Recuperação de Senha -->
         <div style="text-align:right; margin-top:-2px;">
           <button type="button" id="btnForgotPass" style="background:none; border:none; color:var(--gm-muted); font-size:0.8rem; cursor:pointer; text-decoration:underline;">Esqueci a minha senha</button>
         </div>

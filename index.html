@@ -124,7 +124,7 @@
     </div>
   </main>
 
-  <!-- Modal de Edição Avançada Central -->
+  <!-- Modal de Edição Avançada -->
   <div class="modal-backdrop hidden" id="advancedEditModal">
     <div class="modal-card edit-advanced-card">
       <div class="modal-header">
@@ -132,7 +132,6 @@
         <button class="close-modal" id="closeEditModal">✕</button>
       </div>
       
-      <!-- Barra de Formatação e Ajustes -->
       <div class="format-toolbar">
         <button type="button" class="fmt-btn" data-cmd="bold" title="Negrito"><b>B</b></button>
         <button type="button" class="fmt-btn" data-cmd="italic" title="Itálico"><i>I</i></button>
@@ -141,20 +140,36 @@
         <button type="button" class="fmt-btn" data-cmd="justifyLeft" title="Esquerda">⬅️</button>
         <button type="button" class="fmt-btn" data-cmd="justifyCenter" title="Centralizar">⏹️</button>
         <button type="button" class="fmt-btn" data-cmd="justifyRight" title="Direita">➡️</button>
-        <div class="divider"></div>
-        <button type="button" class="fmt-btn" id="btnFontMinus" title="Diminuir Letra">A-</button>
-        <button type="button" class="fmt-btn" id="btnFontPlus" title="Aumentar Letra">A+</button>
-        <button type="button" class="fmt-btn" id="btnBoxLarger" title="Expandir Caixa">📦+</button>
-        <button type="button" class="fmt-btn" id="btnBoxSmaller" title="Reduzir Caixa">📦-</button>
       </div>
 
-      <!-- Caixa de Texto com Pré-visualização Dinâmica -->
       <div id="modalEditableArea" contenteditable="true" class="editable-content-box" placeholder="Digite o conteúdo..."></div>
 
-      <!-- Indicador do Tamanho da Letra no Rodapé -->
-      <div class="font-size-indicator" id="fontSizeIndicator">Tamanho da fonte: 14px</div>
+      <div class="controls-grid">
+        <div class="control-box-item">
+          <span>Letra:</span>
+          <div class="stepper-group">
+            <button type="button" id="btnFontMinus" class="step-btn">−</button>
+            <span id="fontValDisplay">14px</span>
+            <button type="button" id="btnFontPlus" class="step-btn">+</button>
+          </div>
+        </div>
 
-      <div class="modal-actions" style="margin-top: 12px; display: flex; justify-content: flex-end; gap: 8px;">
+        <div class="control-box-item">
+          <span>Caixa (Largura):</span>
+          <div class="stepper-group">
+            <button type="button" id="btnBoxMinus" class="step-btn">−</button>
+            <span id="boxValDisplay">180px</span>
+            <button type="button" id="btnBoxPlus" class="step-btn">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="preview-area-container">
+        <span class="preview-label">Modelo do tamanho que ficará:</span>
+        <div id="livePreviewBox" class="live-preview-box">Pré-visualização</div>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 14px; display: flex; justify-content: flex-end; gap: 8px;">
         <button class="btn btn-outline" id="btnCancelEdit">Cancelar</button>
         <button class="btn btn-primary" id="btnSaveEdit">Salvar Alterações</button>
       </div>
@@ -174,7 +189,7 @@
     </div>
   </footer>
 
-  <!-- Modais Principais -->
+  <!-- Modais -->
   <div class="modal-backdrop hidden" id="myMapsModal">
     <div class="modal-card" style="max-width: 580px;">
       <div class="modal-header">
@@ -220,10 +235,6 @@
     </div>
   </div>
 
-  <div class="toast hidden" id="toast"></div>
-  <script src="script.js"></script>
-</body>
-</html>
   <div class="toast hidden" id="toast"></div>
   <script src="script.js"></script>
 </body>

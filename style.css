@@ -344,10 +344,13 @@ body, html {
   border-color: #FF5E00;
 }
 
-.map-node[contenteditable="true"]:focus {
-  background: #0f172a;
-  border-color: #38bdf8;
-  cursor: text;
+/* Edição de texto otimizada */
+.map-node[contenteditable="true"] {
+  background: #0f172a !important;
+  border-color: #38bdf8 !important;
+  cursor: text !important;
+  user-select: text !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.3) !important;
 }
 
 /* Elementos de Rodapé */

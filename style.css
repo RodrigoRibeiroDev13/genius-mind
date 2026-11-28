@@ -216,8 +216,8 @@ body, html {
   padding: 8px;
   border-radius: 8px;
   border: 1px solid var(--gm-border);
-  margin-top: 12px;
-  margin-bottom: 12px;
+  margin-top: 10px;
+  margin-bottom: 10px;
 }
 
 .fmt-btn {
@@ -233,9 +233,9 @@ body, html {
 
 .editable-content-box {
   width: 100%;
-  min-height: 120px;
-  max-height: 400px;
-  resize: both;
+  min-height: 90px;
+  max-height: 250px;
+  resize: vertical;
   overflow: auto;
   background: #0f172a;
   border: 1.5px solid var(--gm-border);
@@ -244,16 +244,76 @@ body, html {
   color: #fff;
   font-size: 14px;
   outline: none;
+  margin-bottom: 10px;
 }
 .editable-content-box:focus { border-color: #38bdf8; }
 
-.font-size-indicator {
-  font-size: 0.78rem;
+.controls-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.control-box-item {
+  background: #0f172a;
+  border: 1px solid var(--gm-border);
+  padding: 8px 12px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
   color: var(--gm-muted);
-  text-align: right;
-  margin-top: 6px;
-  margin-bottom: 4px;
   font-weight: 600;
+}
+
+.stepper-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+}
+
+.step-btn {
+  background: var(--gm-card);
+  border: 1px solid var(--gm-border);
+  color: #fff;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step-btn:hover { background: var(--gm-orange); border-color: var(--gm-orange); }
+
+.preview-area-container {
+  background: #0b1329;
+  border: 1px dashed var(--gm-border);
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+
+.preview-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--gm-muted);
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.live-preview-box {
+  background: var(--gm-card);
+  border: 2px solid var(--gm-orange);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #fff;
+  word-break: break-word;
+  transition: all 0.15s ease;
 }
 
 .node-toolbar {

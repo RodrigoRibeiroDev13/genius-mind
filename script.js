@@ -16,7 +16,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 let nodes = [
-    { id: 'node-root', text: 'Meu Mapa Estratégico', x: 5000, y: 5000, parent: null, color: '#FF5E00' }
+    { id: 'node-root', text: 'Meu Mapa Estratégico', x: 5000, y: 5000, parent: null, color: '#FF5E00', width: 180, height: 60, fontSize: 14 }
 ];
 let selectedNodeId = null;
 let scale = 1;
@@ -29,7 +29,7 @@ let draggingNodeId = null;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 
-let nodesLayer, connectionsLayer, canvasStage, canvasWrapper, zoomLabel, nodeToolbar, mapTitleInput, toastEl, advancedEditModal, modalEditableArea;
+let nodesLayer, connectionsLayer, canvasStage, canvasWrapper, zoomLabel, nodeToolbar, mapTitleInput, mapTitleTopInput, toastEl, advancedEditModal, modalEditableArea;
 
 window.onload = () => {
     nodesLayer = document.getElementById('nodesLayer');
@@ -39,9 +39,16 @@ window.onload = () => {
     zoomLabel = document.getElementById('zoomLabel');
     nodeToolbar = document.getElementById('nodeToolbar');
     mapTitleInput = document.getElementById('mapTitle');
+    mapTitleTopInput = document.getElementById('mapTitleTop');
     toastEl = document.getElementById('toast');
     advancedEditModal = document.getElementById('advancedEditModal');
     modalEditableArea = document.getElementById('modalEditableArea');
+
+    // Sincronizar os campos de renomear mapa
+    if (mapTitleInput && mapTitleTopInput) {
+        mapTitleInput.oninput = (e) => { mapTitleTopInput.value = e.target.value; };
+        mapTitleTopInput.oninput = (e) => { mapTitleInput.value = e.target.value; };
+    }
 
     initAuth();
     initCanvasInteractions();
@@ -63,26 +70,28 @@ function showToast(msg) {
     setTimeout(() => toastEl.classList.add('hidden'), 3000);
 }
 
-// Renderização Geral com alinhamento perfeito ao centro das caixas
+// Renderização Geral
 function render() {
     if (!nodesLayer || !connectionsLayer) return;
     nodesLayer.innerHTML = '';
     connectionsLayer.innerHTML = '';
 
-    // 1. Desenhar Linhas SVG rigorosamente centradas
+    // 1. Linhas SVG centradas com base no tamanho individual de cada nó
     nodes.forEach(node => {
         if (node.parent) {
             const parent = nodes.find(n => n.id === node.parent);
             if (parent) {
                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 
-                const boxWidth = 200;
-                const boxHeight = 55;
+                const pW = parent.width || 180;
+                const pH = parent.height || 60;
+                const nW = node.width || 180;
+                const nH = node.height || 60;
 
-                const x1 = parent.x + (boxWidth / 2);
-                const y1 = parent.y + (boxHeight / 2);
-                const x2 = node.x + (boxWidth / 2);
-                const y2 = node.y + (boxHeight / 2);
+                const x1 = parent.x + (pW / 2);
+                const y1 = parent.y + (pH / 2);
+                const x2 = node.x + (nW / 2);
+                const y2 = node.y + (nH / 2);
 
                 const curve = `M ${x1} ${y1} C ${x1 + 60} ${y1}, ${x2 - 60} ${y2}, ${x2} ${y2}`;
                 
@@ -95,7 +104,7 @@ function render() {
         }
     });
 
-    // 2. Desenhar Nós Interativos
+    // 2. Nós Interativos com dimensões customizadas
     nodes.forEach(node => {
         const el = document.createElement('div');
         el.className = `map-node ${node.id === selectedNodeId ? 'selected' : ''}`;
@@ -103,9 +112,11 @@ function render() {
         el.id = node.id;
         el.style.left = `${node.x}px`;
         el.style.top = `${node.y}px`;
+        el.style.width = `${node.width || 180}px`;
+        el.style.minHeight = `${node.height || 60}px`;
+        el.style.fontSize = `${node.fontSize || 14}px`;
         el.style.borderColor = node.color || '#334155';
         
-        // Suporta HTML para manter formatações (negrito, itálico, alinhamentos)
         el.innerHTML = node.text;
 
         el.addEventListener('click', (e) => {
@@ -139,7 +150,7 @@ function render() {
     updateNodeToolbar();
 }
 
-// Sistema do Editor Avançado no Meio da Tela com Formatação
+// Editor Avançado com botões de tamanho de letra e da caixa
 function abrirEditorAvancado(nodeId) {
     const node = nodes.find(n => n.id === nodeId);
     if (!node || !advancedEditModal) return;
@@ -151,15 +162,48 @@ function abrirEditorAvancado(nodeId) {
 }
 
 function initAdvancedEditor() {
-    // Botões de Formatação (Negrito, Itálico, Sublinhado, Alinhamentos)
-    document.querySelectorAll('.format-btn').forEach(btn => {
-        btn.onclick = (e) => {
-            e.preventDefault();
-            const cmd = btn.getAttribute('data-cmd');
-            document.execCommand(cmd, false, null);
-            modalEditableArea.focus();
-        };
+    document.querySelectorAll('.fmt-btn').forEach(btn => {
+        const cmd = btn.getAttribute('data-cmd');
+        if (cmd) {
+            btn.onclick = (e) => {
+                e.preventDefault();
+                document.execCommand(cmd, false, null);
+                modalEditableArea.focus();
+            };
+        }
     });
+
+    // Botões para aumentar/diminuir letra e caixa
+    document.getElementById('btnFontPlus').onclick = () => {
+        const node = nodes.find(n => n.id === selectedNodeId);
+        if (node) {
+            node.fontSize = (node.fontSize || 14) + 2;
+            render();
+        }
+    };
+    document.getElementById('btnFontMinus').onclick = () => {
+        const node = nodes.find(n => n.id === selectedNodeId);
+        if (node) {
+            node.fontSize = Math.max(10, (node.fontSize || 14) - 2);
+            render();
+        }
+    };
+    document.getElementById('btnBoxLarger').onclick = () => {
+        const node = nodes.find(n => n.id === selectedNodeId);
+        if (node) {
+            node.width = (node.width || 180) + 40;
+            node.height = (node.height || 60) + 15;
+            render();
+        }
+    };
+    document.getElementById('btnBoxSmaller').onclick = () => {
+        const node = nodes.find(n => n.id === selectedNodeId);
+        if (node) {
+            node.width = Math.max(120, (node.width || 180) - 40);
+            node.height = Math.max(45, (node.height || 60) - 15);
+            render();
+        }
+    };
 
     document.getElementById('btnSaveEdit').onclick = () => {
         if (!selectedNodeId) return;
@@ -167,7 +211,7 @@ function initAdvancedEditor() {
         if (node) {
             node.text = modalEditableArea.innerHTML.trim() || 'Sem título';
             render();
-            showToast('Texto atualizado com sucesso!');
+            showToast('Tópico atualizado com sucesso!');
         }
         advancedEditModal.classList.add('hidden');
     };
@@ -181,7 +225,7 @@ function initAdvancedEditor() {
     };
 }
 
-// Movimentação do Canvas (Pan & Zoom)
+// Movimentação do Canvas
 function initCanvasInteractions() {
     canvasWrapper.addEventListener('mousedown', (e) => {
         if (e.target === canvasWrapper || e.target === canvasStage || e.target === connectionsLayer) {
@@ -288,10 +332,13 @@ function initToolbarActions() {
         nodes.push({
             id: newId,
             text: 'Novo Subtópico',
-            x: parent.x + 260,
+            x: parent.x + 280,
             y: parent.y + (Math.random() * 120 - 60),
             parent: parent.id,
-            color: parent.color
+            color: parent.color,
+            width: 180,
+            height: 60,
+            fontSize: 14
         });
         selectedNodeId = newId;
         render();
@@ -307,7 +354,10 @@ function initToolbarActions() {
             x: node.x,
             y: node.y + 110,
             parent: node.parent,
-            color: node.color
+            color: node.color,
+            width: 180,
+            height: 60,
+            fontSize: 14
         });
         selectedNodeId = newId;
         render();
@@ -338,8 +388,9 @@ function initToolbarActions() {
 
     document.getElementById('btnNewMap').onclick = () => {
         if (confirm('Criar um novo mapa apagará o atual não guardado. Continuar?')) {
-            nodes = [{ id: 'node-root', text: 'Meu Mapa Estratégico', x: 5000, y: 5000, parent: null, color: '#FF5E00' }];
-            mapTitleInput.value = 'Meu Mapa Estratégico';
+            nodes = [{ id: 'node-root', text: 'Meu Mapa Estratégico', x: 5000, y: 5000, parent: null, color: '#FF5E00', width: 180, height: 60, fontSize: 14 }];
+            if (mapTitleInput) mapTitleInput.value = 'Meu Mapa Estratégico';
+            if (mapTitleTopInput) mapTitleTopInput.value = 'Meu Mapa Estratégico';
             selectedNodeId = null;
             centerOnNode('node-root');
             render();
@@ -370,8 +421,9 @@ function initToolbarActions() {
         }
         try {
             const mapId = 'map_' + Date.now();
+            const currentTitle = mapTitleInput ? mapTitleInput.value : 'Meu Mapa Estratégico';
             await db.collection('maps').doc(mapId).set({
-                title: mapTitleInput.value,
+                title: currentTitle,
                 nodes: nodes,
                 owner: user.uid,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -384,8 +436,9 @@ function initToolbarActions() {
 
     document.getElementById('btnShare').onclick = async () => {
         const mapId = 'map_' + Date.now();
+        const currentTitle = mapTitleInput ? mapTitleInput.value : 'Meu Mapa Estratégico';
         await db.collection('maps').doc(mapId).set({
-            title: mapTitleInput.value,
+            title: currentTitle,
             nodes: nodes,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
@@ -401,7 +454,6 @@ function initToolbarActions() {
     };
 }
 
-// Gestão de "Meus Mapas" com Abrir, Renomear e Excluir
 function initMyMapsModal() {
     const modal = document.getElementById('myMapsModal');
     const btn = document.getElementById('btnMyMaps');
@@ -439,7 +491,8 @@ function initMyMapsModal() {
                 titleSpan.style.cssText = 'color: #fff; font-weight: 600; cursor: pointer; flex: 1;';
                 titleSpan.onclick = () => {
                     nodes = data.nodes || nodes;
-                    mapTitleInput.value = data.title || 'Meu Mapa';
+                    if (mapTitleInput) mapTitleInput.value = data.title || 'Meu Mapa';
+                    if (mapTitleTopInput) mapTitleTopInput.value = data.title || 'Meu Mapa';
                     centerOnNode('node-root');
                     render();
                     modal.classList.add('hidden');
@@ -515,7 +568,8 @@ async function loadMapFromURL() {
             if (doc.exists) {
                 const data = doc.data();
                 nodes = data.nodes || nodes;
-                mapTitleInput.value = data.title || 'Mapa Partilhado';
+                if (mapTitleInput) mapTitleInput.value = data.title || 'Mapa Partilhado';
+                if (mapTitleTopInput) mapTitleTopInput.value = data.title || 'Mapa Partilhado';
                 centerOnNode('node-root');
                 render();
                 showToast('Mapa carregado com sucesso!');
@@ -531,26 +585,27 @@ function initDownloadMenu() {
     document.querySelectorAll('#downloadMenu button').forEach(btn => {
         btn.onclick = async () => {
             const format = btn.getAttribute('data-format');
+            const currentTitle = mapTitleInput ? mapTitleInput.value : 'Mapa';
             if (format === 'json') {
-                const blob = new Blob([JSON.stringify({ title: mapTitleInput.value, nodes }, null, 2)], { type: 'application/json' });
-                downloadBlob(blob, `${mapTitleInput.value}.json`);
+                const blob = new Blob([JSON.stringify({ title: currentTitle, nodes }, null, 2)], { type: 'application/json' });
+                downloadBlob(blob, `${currentTitle}.json`);
                 showToast('Download JSON concluído!');
             } else if (format === 'md') {
                 const md = nodes.map(n => `- ${n.text}`).join('\n');
                 const blob = new Blob([md], { type: 'text/markdown' });
-                downloadBlob(blob, `${mapTitleInput.value}.md`);
+                downloadBlob(blob, `${currentTitle}.md`);
                 showToast('Download Markdown concluído!');
             } else if (format === 'svg') {
                 const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="10000" height="10000">${connectionsLayer.innerHTML}${nodesLayer.innerHTML}</svg>`;
                 const blob = new Blob([svgContent], { type: 'image/svg+xml' });
-                downloadBlob(blob, `${mapTitleInput.value}.svg`);
+                downloadBlob(blob, `${currentTitle}.svg`);
                 showToast('Download SVG concluído!');
             } else if (format === 'png' || format === 'pdf') {
                 showToast('A gerar documento...');
                 const canvas = await html2canvas(nodesLayer, { backgroundColor: '#0f172a', scale: 2 });
                 if (format === 'png') {
                     const link = document.createElement('a');
-                    link.download = `${mapTitleInput.value}.png`;
+                    link.download = `${currentTitle}.png`;
                     link.href = canvas.toDataURL();
                     link.click();
                     showToast('Download PNG concluído!');
@@ -558,7 +613,7 @@ function initDownloadMenu() {
                     const { jsPDF } = window.jspdf;
                     const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? 'landscape' : 'portrait', unit: 'px', format: [canvas.width, canvas.height] });
                     pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
-                    pdf.save(`${mapTitleInput.value}.pdf`);
+                    pdf.save(`${currentTitle}.pdf`);
                     showToast('Download PDF concluído!');
                 }
             } else if (format === 'docx') {
@@ -566,13 +621,13 @@ function initDownloadMenu() {
                 const doc = new Document({
                     sections: [{
                         children: [
-                            new Paragraph({ children: [new TextRun({ text: mapTitleInput.value, bold: true, size: 32 })] }),
+                            new Paragraph({ children: [new TextRun({ text: currentTitle, bold: true, size: 32 })] }),
                             ...nodes.map(n => new Paragraph({ children: [new TextRun({ text: `• ${n.text}`, size: 24 })] }))
                         ]
                     }]
                 });
                 const blob = await Packer.toBlob(doc);
-                downloadBlob(blob, `${mapTitleInput.value}.docx`);
+                downloadBlob(blob, `${currentTitle}.docx`);
                 showToast('Download Word (.docx) concluído!');
             }
         };
@@ -594,10 +649,10 @@ function initAIAndFiles() {
         if (!promptText) return;
         
         nodes = [
-            { id: 'node-root', text: promptText, x: 5000, y: 5000, parent: null, color: '#FF5E00' },
-            { id: 'n-1', text: 'Conceito Inicial', x: 5300, y: 4900, parent: 'node-root', color: '#38BDF8' },
-            { id: 'n-2', text: 'Aplicações Práticas', x: 5300, y: 5000, parent: 'node-root', color: '#4ADE80' },
-            { id: 'n-3', text: 'Próximos Passos', x: 5300, y: 5100, parent: 'node-root', color: '#A855F7' }
+            { id: 'node-root', text: promptText, x: 5000, y: 5000, parent: null, color: '#FF5E00', width: 180, height: 60, fontSize: 14 },
+            { id: 'n-1', text: 'Conceito Inicial', x: 5300, y: 4900, parent: 'node-root', color: '#38BDF8', width: 180, height: 60, fontSize: 14 },
+            { id: 'n-2', text: 'Aplicações Práticas', x: 5300, y: 5000, parent: 'node-root', color: '#4ADE80', width: 180, height: 60, fontSize: 14 },
+            { id: 'n-3', text: 'Próximos Passos', x: 5300, y: 5100, parent: 'node-root', color: '#A855F7', width: 180, height: 60, fontSize: 14 }
         ];
         centerOnNode('node-root');
         render();
@@ -613,13 +668,17 @@ function initAIAndFiles() {
                 if (file.name.endsWith('.json')) {
                     const data = JSON.parse(event.target.result);
                     nodes = data.nodes || data;
+                    if (data.title) {
+                        if (mapTitleInput) mapTitleInput.value = data.title;
+                        if (mapTitleTopInput) mapTitleTopInput.value = data.title;
+                    }
                 } else {
                     const lines = event.target.result.split('\n').filter(l => l.trim() !== '');
-                    nodes = [{ id: 'node-root', text: file.name, x: 5000, y: 5000, parent: null, color: '#FF5E00' }];
+                    nodes = [{ id: 'node-root', text: file.name, x: 5000, y: 5000, parent: null, color: '#FF5E00', width: 180, height: 60, fontSize: 14 }];
                     let lastId = 'node-root';
                     lines.forEach((line, idx) => {
                         const id = 'node-' + idx;
-                        nodes.push({ id, text: line.trim(), x: 5300, y: 4900 + (idx * 90), parent: lastId, color: '#38BDF8' });
+                        nodes.push({ id, text: line.trim(), x: 5300, y: 4900 + (idx * 90), parent: lastId, color: '#38BDF8', width: 180, height: 60, fontSize: 14 });
                         lastId = id;
                     });
                 }
@@ -645,7 +704,7 @@ function initAuth() {
     const authTitle = document.getElementById('authTitle');
     let isRegistering = false;
 
-    btnLoginModal.onclick = () => authModal.classList.remove('hidden');
+    document.getElementById('btnLoginModal').onclick = () => authModal.classList.remove('hidden');
     document.getElementById('closeAuthModal').onclick = () => authModal.classList.add('hidden');
 
     toggleAuthMode.onclick = (e) => {

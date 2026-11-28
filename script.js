@@ -29,7 +29,7 @@ let draggingNodeId = null;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 
-let nodesLayer, connectionsLayer, canvasStage, canvasWrapper, zoomLabel, nodeToolbar, mapTitleInput, toastEl, inlineEditInput;
+let nodesLayer, connectionsLayer, canvasStage, canvasWrapper, zoomLabel, nodeToolbar, mapTitleInput, toastEl, advancedEditModal, modalEditableArea;
 
 window.onload = () => {
     nodesLayer = document.getElementById('nodesLayer');
@@ -40,7 +40,8 @@ window.onload = () => {
     nodeToolbar = document.getElementById('nodeToolbar');
     mapTitleInput = document.getElementById('mapTitle');
     toastEl = document.getElementById('toast');
-    inlineEditInput = document.getElementById('inlineEditInput');
+    advancedEditModal = document.getElementById('advancedEditModal');
+    modalEditableArea = document.getElementById('modalEditableArea');
 
     initAuth();
     initCanvasInteractions();
@@ -48,6 +49,7 @@ window.onload = () => {
     initDownloadMenu();
     initAIAndFiles();
     initMyMapsModal();
+    initAdvancedEditor();
     loadMapFromURL();
     
     centerOnNode('node-root');
@@ -61,20 +63,19 @@ function showToast(msg) {
     setTimeout(() => toastEl.classList.add('hidden'), 3000);
 }
 
-// Renderização com linhas SVG rigorosamente alinhadas ao centro exato das caixas
+// Renderização Geral com alinhamento perfeito ao centro das caixas
 function render() {
     if (!nodesLayer || !connectionsLayer) return;
     nodesLayer.innerHTML = '';
     connectionsLayer.innerHTML = '';
 
-    // 1. Desenhar Linhas SVG centradas
+    // 1. Desenhar Linhas SVG rigorosamente centradas
     nodes.forEach(node => {
         if (node.parent) {
             const parent = nodes.find(n => n.id === node.parent);
             if (parent) {
                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 
-                // Dimensões estimadas dinâmicas das caixas para cálculo exato do centro
                 const boxWidth = 200;
                 const boxHeight = 55;
 
@@ -83,7 +84,7 @@ function render() {
                 const x2 = node.x + (boxWidth / 2);
                 const y2 = node.y + (boxHeight / 2);
 
-                const curve = `M ${x1} ${y1} C ${x1 + 70} ${y1}, ${x2 - 70} ${y2}, ${x2} ${y2}`;
+                const curve = `M ${x1} ${y1} C ${x1 + 60} ${y1}, ${x2 - 60} ${y2}, ${x2} ${y2}`;
                 
                 line.setAttribute('d', curve);
                 line.setAttribute('stroke', node.color || '#334155');
@@ -103,11 +104,12 @@ function render() {
         el.style.left = `${node.x}px`;
         el.style.top = `${node.y}px`;
         el.style.borderColor = node.color || '#334155';
-        el.textContent = node.text;
+        
+        // Suporta HTML para manter formatações (negrito, itálico, alinhamentos)
+        el.innerHTML = node.text;
 
         el.addEventListener('click', (e) => {
             selectedNodeId = node.id;
-            fecharInputEdicao();
             updateNodeToolbar();
             render();
             e.stopPropagation();
@@ -115,11 +117,10 @@ function render() {
 
         el.addEventListener('dblclick', (e) => {
             e.stopPropagation();
-            abrirInputEdicao(node.id);
+            abrirEditorAvancado(node.id);
         });
 
         el.addEventListener('mousedown', (e) => {
-            fecharInputEdicao();
             selectedNodeId = node.id;
             draggingNodeId = node.id;
             
@@ -138,49 +139,46 @@ function render() {
     updateNodeToolbar();
 }
 
-// Sistema de Edição por Input Flutuante
-function abrirInputEdicao(nodeId) {
+// Sistema do Editor Avançado no Meio da Tela com Formatação
+function abrirEditorAvancado(nodeId) {
     const node = nodes.find(n => n.id === nodeId);
-    if (!node || !inlineEditInput) return;
+    if (!node || !advancedEditModal) return;
 
     selectedNodeId = nodeId;
-    inlineEditInput.value = node.text;
-    inlineEditInput.classList.remove('hidden');
+    modalEditableArea.innerHTML = node.text;
+    advancedEditModal.classList.remove('hidden');
+    modalEditableArea.focus();
+}
 
-    inlineEditInput.style.left = `${node.x}px`;
-    inlineEditInput.style.top = `${node.y}px`;
-    inlineEditInput.focus();
-    inlineEditInput.select();
+function initAdvancedEditor() {
+    // Botões de Formatação (Negrito, Itálico, Sublinhado, Alinhamentos)
+    document.querySelectorAll('.format-btn').forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            const cmd = btn.getAttribute('data-cmd');
+            document.execCommand(cmd, false, null);
+            modalEditableArea.focus();
+        };
+    });
 
-    inlineEditInput.onkeydown = (e) => {
-        if (e.key === 'Enter') {
-            salvarEdicaoInput(nodeId);
-        } else if (e.key === 'Escape') {
-            fecharInputEdicao();
+    document.getElementById('btnSaveEdit').onclick = () => {
+        if (!selectedNodeId) return;
+        const node = nodes.find(n => n.id === selectedNodeId);
+        if (node) {
+            node.text = modalEditableArea.innerHTML.trim() || 'Sem título';
+            render();
+            showToast('Texto atualizado com sucesso!');
         }
+        advancedEditModal.classList.add('hidden');
     };
 
-    inlineEditInput.onblur = () => {
-        salvarEdicaoInput(nodeId);
+    document.getElementById('btnCancelEdit').onclick = () => {
+        advancedEditModal.classList.add('hidden');
     };
-}
 
-function salvarEdicaoInput(nodeId) {
-    if (!inlineEditInput || inlineEditInput.classList.contains('hidden')) return;
-    const node = nodes.find(n => n.id === nodeId);
-    if (node) {
-        node.text = inlineEditInput.value.trim() || 'Sem título';
-    }
-    fecharInputEdicao();
-    render();
-}
-
-function fecharInputEdicao() {
-    if (inlineEditInput) {
-        inlineEditInput.classList.add('hidden');
-        inlineEditInput.onblur = null;
-        inlineEditInput.onkeydown = null;
-    }
+    document.getElementById('closeEditModal').onclick = () => {
+        advancedEditModal.classList.add('hidden');
+    };
 }
 
 // Movimentação do Canvas (Pan & Zoom)
@@ -191,7 +189,6 @@ function initCanvasInteractions() {
             startX = e.clientX - panX;
             startY = e.clientY - panY;
             selectedNodeId = null;
-            fecharInputEdicao();
             render();
         }
     });
@@ -207,7 +204,6 @@ function initCanvasInteractions() {
                 const stageRect = canvasStage.getBoundingClientRect();
                 node.x = (e.clientX - stageRect.left) / scale - dragOffsetX;
                 node.y = (e.clientY - stageRect.top) / scale - dragOffsetY;
-                fecharInputEdicao();
                 render();
             }
         }
@@ -281,7 +277,7 @@ function updateNodeToolbar() {
 function initToolbarActions() {
     document.getElementById('btnEditNodeText').onclick = () => {
         if (selectedNodeId) {
-            abrirInputEdicao(selectedNodeId);
+            abrirEditorAvancado(selectedNodeId);
         }
     };
 
@@ -405,7 +401,7 @@ function initToolbarActions() {
     };
 }
 
-// Gestão de "Meus Mapas" com botões de Abrir, Renomear e Excluir
+// Gestão de "Meus Mapas" com Abrir, Renomear e Excluir
 function initMyMapsModal() {
     const modal = document.getElementById('myMapsModal');
     const btn = document.getElementById('btnMyMaps');
